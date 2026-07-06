@@ -98,3 +98,25 @@ export function getDistrictByName(name: string): District | undefined {
 export function getAllDistrictNames(): string[] {
   return DISTRICTS.map((d) => d.name);
 }
+
+// Crop sensitivity to weather risk — how badly does each crop suffer from
+// rainfall deviation or drought? Higher number = more sensitive = higher risk.
+export const CROP_RISK_SENSITIVITY: Record<string, number> = {
+  Rice: 85,
+  Sugarcane: 70,
+  Cotton: 65,
+  Banana: 75,
+  Groundnut: 60,
+  Maize: 55,
+  Turmeric: 50,
+  Coconut: 40,
+  Pulses: 60,
+  Chilli: 65,
+  Tapioca: 45,
+  Mango: 35,
+};
+
+// Helper: get crop sensitivity score (defaults to 55 if crop not listed)
+export function getCropSensitivity(crop: string): number {
+  return CROP_RISK_SENSITIVITY[crop] ?? 55;
+}
