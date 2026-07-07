@@ -1,0 +1,144 @@
+{
+  "source_hierarchy": [
+    {
+      "priority": 5,
+      "name": "Tamil Nadu Agricultural University Agritech Portal",
+      "url": "https://agritech.tnau.ac.in/agriculture/",
+      "use_for": [
+        "crop calendars",
+        "district-wise crops",
+        "soil",
+        "irrigation",
+        "Tamil agricultural terminology"
+      ]
+    },
+    {
+      "priority": 5,
+      "name": "Department of Agriculture and Farmers Welfare, Government of India",
+      "url": "https://agriwelfare.gov.in",
+      "use_for": [
+        "KCC",
+        "central schemes",
+        "official guidelines",
+        "MSP announcements"
+      ]
+    },
+    {
+      "priority": 5,
+      "name": "PMFBY Official Portal",
+      "url": "https://pmfby.gov.in",
+      "use_for": [
+        "insurance rules",
+        "premiums",
+        "claim process",
+        "coverage"
+      ]
+    },
+    {
+      "priority": 5,
+      "name": "NABARD",
+      "url": "https://www.nabard.org",
+      "use_for": [
+        "agricultural loans",
+        "refinance schemes",
+        "supported institutions"
+      ]
+    },
+    {
+      "priority": 5,
+      "name": "India Meteorological Department",
+      "url": "https://mausam.imd.gov.in",
+      "use_for": [
+        "rainfall",
+        "weather normals",
+        "temperature",
+        "humidity",
+        "monsoon data"
+      ]
+    },
+    {
+      "priority": 5,
+      "name": "Tamil Nadu Department of Agriculture and Farmers Welfare",
+      "url": "https://www.tnagriculture.in",
+      "use_for": [
+        "district agriculture information",
+        "state schemes"
+      ]
+    },
+    {
+      "priority": 4,
+      "name": "AGMARKNET",
+      "url": "https://agmarknet.gov.in",
+      "use_for": [
+        "market prices",
+        "mandi data"
+      ]
+    },
+    {
+      "priority": 4,
+      "name": "e-NAM",
+      "url": "https://enam.gov.in",
+      "use_for": [
+        "market arrivals",
+        "market prices"
+      ]
+    },
+    {
+      "priority": 4,
+      "name": "data.gov.in",
+      "url": "https://data.gov.in",
+      "use_for": [
+        "government datasets"
+      ]
+    },
+    {
+      "priority": 4,
+      "name": "Commission for Agricultural Costs and Prices",
+      "url": "https://cacp.dacnet.nic.in",
+      "use_for": [
+        "MSP recommendations",
+        "price policy reports"
+      ]
+    }
+  ],
+  "dataset_sources": {
+    "district_data": [
+      "Tamil Nadu Agricultural University Agritech Portal",
+      "Tamil Nadu Department of Agriculture and Farmers Welfare"
+    ],
+    "crop_calendar": [
+      "Tamil Nadu Agricultural University Agritech Portal"
+    ],
+    "weather": [
+      "India Meteorological Department"
+    ],
+    "msp": [
+      "Commission for Agricultural Costs and Prices",
+      "Department of Agriculture and Farmers Welfare, Government of India"
+    ],
+    "schemes": [
+      "PMFBY Official Portal",
+      "NABARD",
+      "Reserve Bank of India",
+      "Department of Agriculture and Farmers Welfare, Government of India",
+      "Tamil Nadu Cooperative Department"
+    ],
+    "banks": [
+      "District Central Cooperative Bank websites",
+      "Tamil Nadu Cooperative Department"
+    ],
+    "tamil_terms": [
+      "Tamil Nadu Agricultural University Agritech Portal"
+    ]
+  },
+  "verification_status": "needs_official_verification",
+  "notes": "Starter research dataset. Verify all official rates, limits, coordinates, rainfall values, crop recommendations, and scheme eligibility before production use.",
+  "metadata": {
+    "source": "Project research source hierarchy",
+    "source_url": "data/metadata/sources.json",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

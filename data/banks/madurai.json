@@ -1,0 +1,21 @@
+{
+  "district": "TN-MADURAI",
+  "banks": [
+    {
+      "id": "dccb_madurai",
+      "name": "Madurai District Central Cooperative Bank",
+      "latitude": 9.925,
+      "longitude": 78.119,
+      "phone": "",
+      "website": ""
+    }
+  ],
+  "metadata": {
+    "source": "Tamil Nadu District Central Cooperative Bank websites and State Cooperative Department",
+    "source_url": "https://www.tncu.tn.gov.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

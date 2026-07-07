@@ -1,0 +1,16 @@
+{
+  "id": "bank_passbook",
+  "name": {
+    "en": "Bank Passbook",
+    "ta": "வங்கி பாஸ்புக்"
+  },
+  "mandatory": true,
+  "metadata": {
+    "source": "Official scheme guidelines",
+    "source_url": "https://agriwelfare.gov.in; https://pmfby.gov.in; https://www.nabard.org",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

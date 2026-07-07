@@ -1,0 +1,20 @@
+{
+  "loan": "கடன்",
+  "insurance": "காப்பீடு",
+  "crop": "பயிர்",
+  "bank": "வங்கி",
+  "farmer": "விவசாயி",
+  "district": "மாவட்டம்",
+  "documents": "ஆவணங்கள்",
+  "weather": "வானிலை",
+  "scheme": "திட்டம்",
+  "msp": "குறைந்தபட்ச ஆதரவு விலை",
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

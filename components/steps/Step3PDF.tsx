@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Download, Share2, ArrowLeft, RotateCcw } from 'lucide-react';
 import { FarmerData } from './Step1Form';
-import districts from '@/src/data/districts.json';
+import districts from '@/lib/data/districts.json';
 import crops from '@/src/data/crops.json';
 import schemes from '@/src/data/schemes.json';
 import riskMatrix from '@/src/data/riskMatrix.json';

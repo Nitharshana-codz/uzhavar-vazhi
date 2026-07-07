@@ -1,0 +1,94 @@
+{
+  "cotton": {
+    "temperature": {
+      "min": 20,
+      "max": 35
+    },
+    "rainfall": {
+      "min": 500,
+      "max": 900
+    },
+    "humidity": {
+      "min": 50,
+      "max": 80
+    }
+  },
+  "maize": {
+    "temperature": {
+      "min": 18,
+      "max": 32
+    },
+    "rainfall": {
+      "min": 450,
+      "max": 800
+    },
+    "humidity": {
+      "min": 50,
+      "max": 75
+    }
+  },
+  "paddy": {
+    "temperature": {
+      "min": 20,
+      "max": 37
+    },
+    "rainfall": {
+      "min": 800,
+      "max": 1200
+    },
+    "humidity": {
+      "min": 60,
+      "max": 85
+    }
+  },
+  "coconut": {
+    "temperature": {
+      "min": 20,
+      "max": 34
+    },
+    "rainfall": {
+      "min": 1000,
+      "max": 2500
+    },
+    "humidity": {
+      "min": 60,
+      "max": 85
+    }
+  },
+  "turmeric": {
+    "temperature": {
+      "min": 20,
+      "max": 30
+    },
+    "rainfall": {
+      "min": 1000,
+      "max": 1500
+    },
+    "humidity": {
+      "min": 60,
+      "max": 80
+    }
+  },
+  "ragi": {
+    "temperature": {
+      "min": 18,
+      "max": 30
+    },
+    "rainfall": {
+      "min": 400,
+      "max": 750
+    },
+    "humidity": {
+      "min": 40,
+      "max": 70
+    }
+  },
+  "metadata": {
+    "source": "India Meteorological Department; Tamil Nadu Agricultural University Agritech Portal",
+    "source_url": "https://mausam.imd.gov.in; https://agritech.tnau.ac.in/agriculture/",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "crop_sowing_certificate",
+  "name": {
+    "en": "Crop Sowing Certificate",
+    "ta": "பயிர் விதைப்பு சான்றிதழ்"
+  },
+  "mandatory": false,
+  "metadata": {
+    "source": "Official scheme guidelines",
+    "source_url": "https://agriwelfare.gov.in; https://pmfby.gov.in; https://www.nabard.org",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

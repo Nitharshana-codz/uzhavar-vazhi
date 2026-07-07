@@ -1,0 +1,33 @@
+{
+  "id": "ragi",
+  "name": {
+    "en": "Ragi",
+    "ta": "கேழ்வரகு"
+  },
+  "category": "Millet",
+  "season": [
+    "Kharif",
+    "Rabi"
+  ],
+  "water_requirement": "Low",
+  "temperature": {
+    "min": 18,
+    "max": 30
+  },
+  "rainfall": {
+    "min": 400,
+    "max": 750
+  },
+  "humidity": {
+    "min": 40,
+    "max": 70
+  },
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

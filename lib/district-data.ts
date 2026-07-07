@@ -1,100 +1,122 @@
-// lib/district-data.ts
-// This file stores basic data for all 38 districts of Tamil Nadu.
-// Other files (like our API routes) will import this data to look things up.
+import coimbatore from "@/data/districts/coimbatore.json";
+import madurai from "@/data/districts/madurai.json";
+import salem from "@/data/districts/salem.json";
+import thanjavur from "@/data/districts/thanjavur.json";
 
-// "type" creates a custom data shape in TypeScript.
-// This says: a District object always has these exact fields, with these exact types.
-export type District = {
-  name: string;              // English name, e.g. "Coimbatore"
-  tamilName: string;         // Tamil name, e.g. "கோயம்புத்தூர்"
-  region: string;            // Which broad region of TN it belongs to
-  mainCrops: string[];       // List of major crops grown there
-  avgRainfallMM: number;     // Average annual rainfall in millimetres
-  riskLevel: "Low" | "Medium" | "High"; // Pre-assessed seasonal risk category
+import coconut from "@/data/crops/coconut.json";
+import cotton from "@/data/crops/cotton.json";
+import maize from "@/data/crops/maize.json";
+import paddy from "@/data/crops/paddy.json";
+import ragi from "@/data/crops/ragi.json";
+import turmeric from "@/data/crops/turmeric.json";
+
+export type VerificationStatus =
+  | "needs_official_verification"
+  | "partially_verified"
+  | "verified";
+
+export type DataMetadata = {
+  source: string;
+  source_url: string;
+  last_verified: string | null;
+  verification_status: VerificationStatus;
+  verified_by: string;
+  notes: string;
 };
 
-// This is the actual list of districts.
-// "DISTRICTS" is an array (a list) of District objects.
-// We're starting with 8 districts to keep this manageable —
-// Member 3 will expand this to all 38 once their research is ready.
-export const DISTRICTS: District[] = [
-  {
-    name: "Coimbatore",
-    tamilName: "கோயம்புத்தூர்",
-    region: "Western",
-    mainCrops: ["Cotton", "Maize", "Coconut", "Turmeric"],
-    avgRainfallMM: 700,
-    riskLevel: "Medium",
-  },
-  {
-    name: "Madurai",
-    tamilName: "மதுரை",
-    region: "Southern",
-    mainCrops: ["Rice", "Cotton", "Pulses"],
-    avgRainfallMM: 850,
-    riskLevel: "Medium",
-  },
-  {
-    name: "Thanjavur",
-    tamilName: "தஞ்சாவூர்",
-    region: "Cauvery Delta",
-    mainCrops: ["Rice", "Sugarcane", "Banana"],
-    avgRainfallMM: 950,
-    riskLevel: "Low",
-  },
-  {
-    name: "Tirunelveli",
-    tamilName: "திருநெல்வேலி",
-    region: "Southern",
-    mainCrops: ["Rice", "Banana", "Chilli"],
-    avgRainfallMM: 780,
-    riskLevel: "Medium",
-  },
-  {
-    name: "Salem",
-    tamilName: "சேலம்",
-    region: "Western",
-    mainCrops: ["Tapioca", "Mango", "Sugarcane"],
-    avgRainfallMM: 870,
-    riskLevel: "Medium",
-  },
-  {
-    name: "Nagapattinam",
-    tamilName: "நாகப்பட்டினம்",
-    region: "Cauvery Delta",
-    mainCrops: ["Rice", "Groundnut"],
-    avgRainfallMM: 1050,
-    riskLevel: "High",
-  },
-  {
-    name: "Erode",
-    tamilName: "ஈரோடு",
-    region: "Western",
-    mainCrops: ["Turmeric", "Cotton", "Coconut"],
-    avgRainfallMM: 720,
-    riskLevel: "Medium",
-  },
-  {
-    name: "Villupuram",
-    tamilName: "விழுப்புரம்",
-    region: "Northern",
-    mainCrops: ["Groundnut", "Rice", "Sugarcane"],
-    avgRainfallMM: 1100,
-    riskLevel: "High",
-  },
+export type District = {
+  id: string;
+  name: string;
+  tamilName: string;
+  region: string;
+  agroClimaticZone: string;
+  headquarters: string;
+  mainCrops: string[];
+  cropIds: string[];
+  bankIds: string[];
+  availableSchemeIds: string[];
+  avgRainfallMM: number;
+  riskLevel: "Low" | "Medium" | "High";
+  metadata: DataMetadata;
+};
+
+type RawDistrict = typeof coimbatore;
+type RawCrop = typeof cotton;
+
+const RAW_DISTRICTS: RawDistrict[] = [
+  coimbatore,
+  madurai,
+  salem,
+  thanjavur,
 ];
 
-// A helper function: given a district name, find and return its full data.
-// "find" searches through the DISTRICTS array and returns the first match.
-// Returns "undefined" if no match is found (we'll handle that case later).
-export function getDistrictByName(name: string): District | undefined {
-  return DISTRICTS.find(
-    (d) => d.name.toLowerCase() === name.toLowerCase()
-  );
+const CROPS_BY_ID: Record<string, RawCrop> = {
+  coconut,
+  cotton,
+  maize,
+  paddy,
+  ragi,
+  turmeric,
+};
+
+function toTitleCropName(cropId: string): string {
+  return CROPS_BY_ID[cropId]?.name.en ?? cropId;
 }
 
-// A helper function: returns just the list of district names.
-// Useful later for the frontend dropdown (Member 2 will use this).
+function getRiskLevel(avgRainfallMM: number): District["riskLevel"] {
+  if (avgRainfallMM < 700 || avgRainfallMM > 1000) return "High";
+  if (avgRainfallMM < 800) return "Medium";
+  return "Low";
+}
+
+function toDistrict(rawDistrict: RawDistrict): District {
+  return {
+    id: rawDistrict.id,
+    name: rawDistrict.name.en,
+    tamilName: rawDistrict.name.ta,
+    region: rawDistrict.region,
+    agroClimaticZone: rawDistrict.agro_climatic_zone,
+    headquarters: rawDistrict.headquarters,
+    mainCrops: rawDistrict.major_crops.map(toTitleCropName),
+    cropIds: rawDistrict.major_crops,
+    bankIds: rawDistrict.banks,
+    availableSchemeIds: rawDistrict.available_schemes,
+    avgRainfallMM: rawDistrict.annual_rainfall_mm,
+    riskLevel: getRiskLevel(rawDistrict.annual_rainfall_mm),
+    metadata: rawDistrict.metadata as DataMetadata,
+  };
+}
+
+export const DISTRICTS: District[] = RAW_DISTRICTS.map(toDistrict);
+
+export function getDistrictByName(name: string): District | undefined {
+  return DISTRICTS.find((district) => {
+    const normalizedName = name.toLowerCase();
+    return (
+      district.name.toLowerCase() === normalizedName ||
+      district.id.toLowerCase() === normalizedName
+    );
+  });
+}
+
 export function getAllDistrictNames(): string[] {
-  return DISTRICTS.map((d) => d.name);
+  return DISTRICTS.map((district) => district.name);
+}
+
+export function getDistrictResearchMetadata(name: string): DataMetadata | undefined {
+  return getDistrictByName(name)?.metadata;
+}
+
+export const CROP_RISK_SENSITIVITY: Record<string, number> = {
+  Paddy: 85,
+  Rice: 85,
+  Cotton: 65,
+  Maize: 55,
+  Turmeric: 50,
+  Coconut: 40,
+  Ragi: 45,
+};
+
+export function getCropSensitivity(crop: string): number {
+  return CROP_RISK_SENSITIVITY[crop] ?? 55;
 }
