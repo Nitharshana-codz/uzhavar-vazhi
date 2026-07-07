@@ -6,6 +6,12 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+type AutoTableDoc = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+  };
+};
+
 // This type describes all the data we need to build the PDF
 export type FarmerProfile = {
   // Farmer's input
@@ -18,7 +24,7 @@ export type FarmerProfile = {
   loans: {
     name: string;
     provider: string;
-    maxAmount: number;
+    maxAmount: number | null;
     interestRate: string;
     documents: string[];
   }[];
@@ -138,7 +144,9 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     body: profile.loans.map((loan) => [
       loan.name,
       loan.provider,
-      `₹${loan.maxAmount.toLocaleString("en-IN")}`,
+      loan.maxAmount === null
+        ? "Varies by bank/product"
+        : `₹${loan.maxAmount.toLocaleString("en-IN")}`,
       loan.interestRate,
     ]),
     headStyles: {
@@ -151,7 +159,7 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? y) + 10;
 
   // ── Documents Needed ─────────────────────────────────────────────────────
   if (profile.loans.length > 0) {
@@ -202,7 +210,7 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? y) + 10;
 
   // ── Footer ───────────────────────────────────────────────────────────────
   doc.setFillColor(243, 244, 246);

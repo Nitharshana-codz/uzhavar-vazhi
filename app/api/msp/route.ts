@@ -4,6 +4,7 @@ import {
   getMSPForCrop,
   getBestMSPForCrop,
   MSP_DATA,
+  MSP_SEASON,
   getAllCategories,
   getAllCropNames,
   calculateExpectedRevenue,
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
         tamilName: bestEntry.tamilName,
         season: bestEntry.season,
         category: bestEntry.category,
-        season2026_27: "2026-27",
+        marketingSeason: bestEntry.marketingSeason,
         // Return all varieties if crop has multiple (e.g. Cotton, Paddy)
         varieties: entries.map((e) => ({
           variety: e.variety ?? "Standard",
@@ -59,8 +60,8 @@ export async function GET(request: NextRequest) {
 
     // Return full table
     return NextResponse.json({
-      season: "2026-27",
-      source: "CCEA Official Announcement",
+      season: MSP_SEASON,
+      source: MSP_DATA[0]?.metadata.source ?? "MSP JSON data",
       totalCrops: MSP_DATA.length,
       categories: getAllCategories(),
       crops: MSP_DATA.map((m) => ({
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       })),
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Something went wrong fetching MSP data" },
       { status: 500 }

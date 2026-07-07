@@ -1,7 +1,12 @@
-// lib/msp-data.ts
-// MSP (Minimum Support Price) data for Tamil Nadu crops.
-// Source: Official CCEA 2026-27 announcement
-// Unit: Indian Rupees per Quintal (1 quintal = 100 kg)
+import msp2025 from "@/data/msp/2025-26.json";
+import msp2026 from "@/data/msp/2026-27.json";
+
+import cotton from "@/data/crops/cotton.json";
+import maize from "@/data/crops/maize.json";
+import paddy from "@/data/crops/paddy.json";
+import ragi from "@/data/crops/ragi.json";
+
+import type { DataMetadata } from "./district-data";
 
 export type MSPEntry = {
   crop: string;
@@ -11,197 +16,84 @@ export type MSPEntry = {
   mspPerQuintal: number;
   mspPerKg: number;
   category: string;
+  marketingSeason: string;
+  metadata: DataMetadata;
 };
 
-export const MSP_DATA: MSPEntry[] = [
-  {
-    crop: "Paddy",
-    tamilName: "நெல்",
+type CropInfo = {
+  crop: string;
+  tamilName: string;
+  variety?: string;
+  season: MSPEntry["season"];
+  category: string;
+};
+
+const PRICE_KEY_TO_CROP: Record<string, CropInfo> = {
+  paddy_common: {
+    crop: paddy.name.en,
+    tamilName: paddy.name.ta,
     variety: "Common",
     season: "Kharif",
-    mspPerQuintal: 2441,
-    mspPerKg: 24.41,
     category: "Cereals",
   },
-  {
-    crop: "Paddy",
-    tamilName: "நெல் (Grade A)",
-    variety: "Grade A",
+  maize: {
+    crop: maize.name.en,
+    tamilName: maize.name.ta,
     season: "Kharif",
-    mspPerQuintal: 2461,
-    mspPerKg: 24.61,
     category: "Cereals",
   },
-  {
-    crop: "Sorghum",
-    tamilName: "சோளம்",
-    variety: "Hybrid",
-    season: "Kharif",
-    mspPerQuintal: 4023,
-    mspPerKg: 40.23,
-    category: "Cereals",
-  },
-  {
-    crop: "Sorghum",
-    tamilName: "சோளம் (மல்தாண்டி)",
-    variety: "Maldandi",
-    season: "Kharif",
-    mspPerQuintal: 4073,
-    mspPerKg: 40.73,
-    category: "Cereals",
-  },
-  {
-    crop: "Cumbu",
-    tamilName: "கம்பு",
-    season: "Kharif",
-    mspPerQuintal: 2900,
-    mspPerKg: 29.00,
-    category: "Cereals",
-  },
-  {
-    crop: "Maize",
-    tamilName: "மக்காச்சோளம்",
-    season: "Kharif",
-    mspPerQuintal: 2410,
-    mspPerKg: 24.10,
-    category: "Cereals",
-  },
-  {
-    crop: "Ragi",
-    tamilName: "ராகி",
-    season: "Kharif",
-    mspPerQuintal: 5205,
-    mspPerKg: 52.05,
-    category: "Cereals",
-  },
-  {
-    crop: "Redgram",
-    tamilName: "துவரம் பருப்பு",
-    season: "Kharif",
-    mspPerQuintal: 8450,
-    mspPerKg: 84.50,
-    category: "Pulses",
-  },
-  {
-    crop: "Greengram",
-    tamilName: "பாசிப்பருப்பு",
-    season: "Kharif",
-    mspPerQuintal: 8780,
-    mspPerKg: 87.80,
-    category: "Pulses",
-  },
-  {
-    crop: "Blackgram",
-    tamilName: "உளுந்து",
-    season: "Kharif",
-    mspPerQuintal: 8200,
-    mspPerKg: 82.00,
-    category: "Pulses",
-  },
-  {
-    crop: "Bengalgram",
-    tamilName: "கடலை பருப்பு",
-    season: "Rabi",
-    mspPerQuintal: 5875,
-    mspPerKg: 58.75,
-    category: "Pulses",
-  },
-  {
-    crop: "Cotton",
-    tamilName: "பருத்தி",
+  cotton_medium: {
+    crop: cotton.name.en,
+    tamilName: cotton.name.ta,
     variety: "Medium Staple",
     season: "Kharif",
-    mspPerQuintal: 8267,
-    mspPerKg: 82.67,
     category: "Commercial Crops",
   },
-  {
-    crop: "Cotton",
-    tamilName: "பருத்தி (நீண்ட நார்)",
-    variety: "Long Staple",
+  ragi: {
+    crop: ragi.name.en,
+    tamilName: ragi.name.ta,
     season: "Kharif",
-    mspPerQuintal: 8667,
-    mspPerKg: 86.67,
-    category: "Commercial Crops",
+    category: "Cereals",
   },
-  {
-    crop: "Groundnut",
-    tamilName: "நிலக்கடலை",
-    season: "Kharif",
-    mspPerQuintal: 7517,
-    mspPerKg: 75.17,
-    category: "Oilseeds",
-  },
-  {
-    crop: "Sugarcane",
-    tamilName: "கரும்பு",
-    variety: "10% sugar recovery",
-    season: "Both",
-    mspPerQuintal: 365,
-    mspPerKg: 3.65,
-    category: "Commercial Crops",
-  },
-  {
-    crop: "Sunflower",
-    tamilName: "சூரியகாந்தி",
-    season: "Kharif",
-    mspPerQuintal: 8343,
-    mspPerKg: 83.43,
-    category: "Oilseeds",
-  },
-  {
-    crop: "Soyabean",
-    tamilName: "சோயாபீன்",
-    season: "Kharif",
-    mspPerQuintal: 5708,
-    mspPerKg: 57.08,
-    category: "Oilseeds",
-  },
-  {
-    crop: "Sesamum",
-    tamilName: "எள்",
-    season: "Kharif",
-    mspPerQuintal: 10346,
-    mspPerKg: 103.46,
-    category: "Oilseeds",
-  },
-  {
-    crop: "Copra",
-    tamilName: "உலர்ந்த தேங்காய்",
-    variety: "Milling",
-    season: "Both",
-    mspPerQuintal: 12027,
-    mspPerKg: 120.27,
-    category: "Plantation Crops",
-  },
-  {
-    crop: "Copra",
-    tamilName: "உலர்ந்த தேங்காய் (Ball)",
-    variety: "Ball",
-    season: "Both",
-    mspPerQuintal: 12500,
-    mspPerKg: 125.00,
-    category: "Plantation Crops",
-  },
-  {
-    crop: "Coconut",
-    tamilName: "தேங்காய்",
-    variety: "Dehusked",
-    season: "Both",
-    mspPerQuintal: 3250,
-    mspPerKg: 32.50,
-    category: "Plantation Crops",
-  },
-];
+};
 
-// Helper: get MSP for a specific crop (returns all varieties if multiple exist)
+function buildMSPEntries(
+  source: typeof msp2025 | typeof msp2026
+): MSPEntry[] {
+  return Object.entries(source.prices)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number")
+    .map(([priceKey, mspPerQuintal]) => {
+      const cropInfo = PRICE_KEY_TO_CROP[priceKey];
+
+      return {
+        crop: cropInfo.crop,
+        tamilName: cropInfo.tamilName,
+        variety: cropInfo.variety,
+        season: cropInfo.season,
+        category: cropInfo.category,
+        marketingSeason: source.season,
+        mspPerQuintal,
+        mspPerKg: mspPerQuintal / 100,
+        metadata: source.metadata as DataMetadata,
+      };
+    });
+}
+
+const LATEST_NUMERIC_MSP_SOURCE = Object.values(msp2026.prices).some(
+  (price) => typeof price === "number"
+)
+  ? msp2026
+  : msp2025;
+
+export const MSP_SEASON = LATEST_NUMERIC_MSP_SOURCE.season;
+export const MSP_DATA: MSPEntry[] = buildMSPEntries(LATEST_NUMERIC_MSP_SOURCE);
+
 export function getMSPForCrop(cropName: string): MSPEntry[] {
   return MSP_DATA.filter(
-    (m) => m.crop.toLowerCase() === cropName.toLowerCase()
+    (msp) => msp.crop.toLowerCase() === cropName.toLowerCase()
   );
 }
 
-// Helper: get the best (highest) MSP for a crop — useful for revenue calculation
 export function getBestMSPForCrop(cropName: string): MSPEntry | undefined {
   const entries = getMSPForCrop(cropName);
   if (entries.length === 0) return undefined;
@@ -210,45 +102,28 @@ export function getBestMSPForCrop(cropName: string): MSPEntry | undefined {
   );
 }
 
-// Helper: get all crops in a specific category
 export function getMSPByCategory(category: string): MSPEntry[] {
   return MSP_DATA.filter(
-    (m) => m.category.toLowerCase() === category.toLowerCase()
+    (msp) => msp.category.toLowerCase() === category.toLowerCase()
   );
 }
 
-// Helper: get all unique crop names (no duplicates for varieties)
 export function getAllCropNames(): string[] {
-  return [...new Set(MSP_DATA.map((m) => m.crop))];
+  return [...new Set(MSP_DATA.map((msp) => msp.crop))];
 }
 
-// Helper: get all unique categories
 export function getAllCategories(): string[] {
-  return [...new Set(MSP_DATA.map((m) => m.category))];
+  return [...new Set(MSP_DATA.map((msp) => msp.category))];
 }
 
-// Average yield per acre for TN crops (kg/acre) — conservative estimates
 export const YIELD_PER_ACRE: Record<string, number> = {
   Paddy: 1200,
-  Sorghum: 800,
-  Cumbu: 600,
   Maize: 1400,
   Ragi: 700,
-  Redgram: 300,
-  Greengram: 250,
-  Blackgram: 250,
-  Bengalgram: 350,
   Cotton: 300,
-  Groundnut: 500,
-  Sugarcane: 30000,
-  Sunflower: 400,
-  Soyabean: 500,
-  Sesamum: 200,
-  Copra: 600,
   Coconut: 4500,
 };
 
-// Helper: calculate expected earnings for a farmer
 export function calculateExpectedRevenue(
   cropName: string,
   landAcres: number
@@ -264,8 +139,6 @@ export function calculateExpectedRevenue(
   const yieldPerAcre = YIELD_PER_ACRE[cropName] ?? 800;
   const estimatedYieldKg = Math.round(yieldPerAcre * landAcres);
   const expectedRevenueAtMSP = Math.round(estimatedYieldKg * msp.mspPerKg);
-
-  // Market price is typically 15-20% below MSP for small farmers
   const marketPricePerKg = msp.mspPerKg * 0.82;
   const expectedRevenueAtMarket = Math.round(estimatedYieldKg * marketPricePerKg);
   const lostToMiddlemen = expectedRevenueAtMSP - expectedRevenueAtMarket;
@@ -277,3 +150,13 @@ export function calculateExpectedRevenue(
     lostToMiddlemen,
   };
 }
+
+export function getMSPResearchMetadata(): DataMetadata {
+  return LATEST_NUMERIC_MSP_SOURCE.metadata as DataMetadata;
+}
+
+export const MSP_PENDING_UPDATE = {
+  season: msp2026.season,
+  status: msp2026.status,
+  metadata: msp2026.metadata as DataMetadata,
+};
