@@ -1,0 +1,55 @@
+[
+  {
+    "id": "kcc",
+    "en": "KCC",
+    "ta": "கிசான் கடன் அட்டை",
+    "type": "loan",
+    "maxAmount": 180000,
+    "eligibleCrops": ["paddy", "sugarcane", "cotton", "groundnut", "maize", "banana", "coconut", "turmeric"],
+    "minLandSize": 0.5,
+    "maxLandSize": null,
+    "ownership": ["owned", "tenant", "leasehold"]
+  },
+  {
+    "id": "cooperative",
+    "en": "Cooperative loan",
+    "ta": "கூட்டுறவு கடன்",
+    "type": "loan",
+    "maxAmount": 250000,
+    "eligibleCrops": ["paddy", "sugarcane", "banana", "coconut"],
+    "minLandSize": 1,
+    "maxLandSize": null,
+    "ownership": ["owned"]
+  },
+  {
+    "id": "nabard",
+    "en": "NABARD scheme",
+    "ta": "நபார்டு திட்டம்",
+    "type": "loan",
+    "maxAmount": 500000,
+    "eligibleCrops": ["paddy", "sugarcane", "cotton", "turmeric"],
+    "minLandSize": 2,
+    "maxLandSize": 50,
+    "ownership": ["owned"]
+  },
+  {
+    "id": "pmfby",
+    "en": "PMFBY",
+    "ta": "பி.எம்.பி.பை.ஒய்",
+    "type": "insurance",
+    "eligibleCrops": ["paddy", "cotton", "groundnut", "maize"],
+    "minLandSize": 0.25,
+    "maxLandSize": null,
+    "ownership": ["owned", "tenant", "leasehold"]
+  },
+  {
+    "id": "tnDeltaRelief",
+    "en": "TN Delta Relief",
+    "ta": "தமிழக டெல்டா நிவாரணம்",
+    "type": "insurance",
+    "districts": ["thanjavur", "nagapattinam", "tiruvarur", "mayiladuthurai", "cuddalore", "ariyalur", "perambalur", "pudukottai"],
+    "eligibleCrops": ["paddy", "sugarcane"],
+    "minLandSize": 0.5,
+    "ownership": ["owned", "tenant"]
+  }
+]

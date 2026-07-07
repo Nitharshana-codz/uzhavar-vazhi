@@ -1,0 +1,149 @@
+{
+  "app": {
+    "name": "Uzhavar Vazhi",
+    "nameTamil": "உழவர் வழி"
+  },
+  "hero": {
+    "title": "Know your rights. Get your loan.",
+    "titleTamil": "உங்கள் உரிமைகளை அறியுங்கள். உங்கள் கடனை பெறுங்கள்.",
+    "trust": "38 மாவட்டங்கள் · 12+ திட்டங்கள் · எப்போதும் இலவசம்"
+  },
+  "steps": {
+    "step1": {
+      "en": "Your farm details",
+      "ta": "விவசாய விவரங்கள்"
+    },
+    "step2": {
+      "en": "Eligibility results",
+      "ta": "தகுதி முடிவுகள்"
+    },
+    "step3": {
+      "en": "Your profile",
+      "ta": "சுயவிவர அறிக்கை"
+    },
+    "progress": "படி {{current}} / {{total}}"
+  },
+  "form": {
+    "farmerName": {
+      "label": "Farmer Name",
+      "labelTa": "விவசாயி பெயர்",
+      "placeholder": "விவசாயி பெயரை உள்ளிடவும்"
+    },
+    "district": {
+      "label": "District",
+      "labelTa": "மாவட்டம்",
+      "placeholder": "மாவட்டத்தைத் தேர்ந்தெடுக்கவும்"
+    },
+    "crop": {
+      "label": "Crop",
+      "labelTa": "பயிர்",
+      "placeholder": "பயிரைத் தேர்ந்தெடுக்கவும்"
+    },
+    "landSize": {
+      "label": "Land Size (acres)",
+      "labelTa": "நில அளவு (ஏக்கர்)",
+      "helper": "பெரும்பாலான திட்டங்களுக்குத் தகுதி பெற குறைந்தபட்சம் 0.5 ஏக்கர் நிலம் இருக்க வேண்டும்."
+    },
+    "ownership": {
+      "label": "Land Ownership",
+      "labelTa": "நில உரிமை",
+      "owned": { "en": "Owned", "ta": "சொந்தமான" },
+      "tenant": { "en": "Tenant", "ta": "குத்தகைதாரர்" },
+      "leasehold": { "en": "Leasehold", "ta": "குத்தகை" }
+    },
+    "submit": {
+      "en": "Check Eligibility",
+      "ta": "தகுதியைச் சரிபார்க்கவும்",
+      "loading": "சரிபார்க்கிறது..."
+    }
+  },
+  "results": {
+    "eligibilityScore": "தகுதி",
+    "eligibility": {
+      "high": "HIGH",
+      "highTa": "உயர்",
+      "medium": "MEDIUM",
+      "mediumTa": "நடுத்தரம்",
+      "low": "LOW",
+      "lowTa": "குறைந்த"
+    },
+    "loans": {
+      "title": "Eligible Loan Schemes",
+      "titleTa": "தகுதியான கடன் திட்டங்கள்",
+      "maxAmount": "Max Loan Amount",
+      "maxAmountTa": "அதிகபட்ச கடன் தொகை"
+    },
+    "insurance": {
+      "title": "Eligible Insurance Schemes",
+      "titleTa": "தகுதியான காப்பீட்டுத் திட்டங்கள்",
+      "clickToApply": "Click info to apply",
+      "clickToApplyTa": "விவரங்களை அறிய காப்பீட்டை அழுத்தவும்"
+    },
+    "msp": {
+      "title": "Today's Minimum Support Price (MSP)",
+      "titleTa": "இன்றைய குறைந்தபட்ச ஆதரவு விலை (MSP)",
+      "perQuintal": "/ quintal",
+      "perQuintalTa": "/ குவிண்டால்",
+      "guaranteed": "Government guaranteed minimum price reference",
+      "guaranteedTa": "அரசு உத்தரவாத குறைந்தபட்ச விலை குறிப்பு",
+      "season": "season",
+      "seasonTa": "பருவம்",
+      "noMsp": "குறைந்தபட்ச ஆதரவு விலை இல்லை"
+    },
+    "risk": {
+      "title": "Seasonal Risk",
+      "titleTa": "பருவகால ஆபத்து",
+      "low": "Low Risk",
+      "lowTa": "குறைந்த ஆபத்து",
+      "medium": "Medium Risk",
+      "mediumTa": "நடுத்தர ஆபத்து",
+      "high": "High Risk",
+      "highTa": "அதிக ஆபத்து",
+      "impact": "Low Northeast Monsoon impact expected",
+      "impactTa": "வடகிழ்க்கு பருவமழை தாக்கம் குறைவாக இருக்கும் என எதிர்பார்க்கப்படுகிறது"
+    },
+    "actions": {
+      "next": { "en": "Generate report & PDF", "ta": "அறிக்கையைப் பெற & PDF பதிவிறக்க" },
+      "back": { "en": "Edit details", "ta": "விவரங்களை மாற்று" }
+    },
+    "status": {
+      "eligible": { "en": "Eligible", "ta": "தகுதியானது" }
+    }
+  },
+  "pdf": {
+    "title": "Farmer Financial Profile",
+    "titleTa": "விவசாயி நிதி அறிக்கை",
+    "fields": {
+      "farmerName": "Farmer Name",
+      "farmerNameTa": "விவசாயி பெயர்",
+      "district": "District",
+      "districtTa": "மாவட்டம்",
+      "crop": "Crop",
+      "cropTa": "பயிர்",
+      "season": "Season",
+      "seasonTa": "பருவம்",
+      "landSize": "Land Size",
+      "landSizeTa": "நில அளவு",
+      "ownership": "Ownership",
+      "ownershipTa": "உரிமை வகை",
+      "seasonalRisk": "Seasonal Risk",
+      "seasonalRiskTa": "பருவகால ஆபத்து",
+      "riskLevel": "Risk Level",
+      "riskLevelTa": "ஆபத்து நிலை",
+      "mspReference": "MSP Reference",
+      "mspReferenceTa": "குறைந்தபட்ச ஆதரவு விலை குறிப்பு",
+      "nearestPacs": "Nearest PACS",
+      "nearestPacsTa": "அருகிலுள்ள கூட்டுறவு வங்கி"
+    },
+    "footer": {
+      "en": "Uzhavar Vazhi — Supporting Tamil Nadu Farmers",
+      "ta": "உழவர் வழி — தமிழ்நாட்டு விவசாயிகளுக்கு ஆதரவு"
+    },
+    "actions": {
+      "download": { "en": "Download PDF", "ta": "PDF பதிவிறக்கவும்" },
+      "whatsapp": { "en": "Share on WhatsApp", "ta": "வாட்ஸ்அப்பில் பகிரவும்" },
+      "back": { "en": "Back", "ta": "பின்செல்" },
+      "newFarmer": { "en": "New Farmer", "ta": "புதிய விவசாயி" }
+    }
+  }
+}

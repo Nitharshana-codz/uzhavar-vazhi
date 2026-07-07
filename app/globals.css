@@ -1,26 +1,57 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-straw;
+  }
+
+  body {
+    @apply bg-cream text-soil font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .font-tamil {
+    font-family: 'Noto Sans Tamil', sans-serif;
+  }
+}
+
+*:focus-visible {
+  @apply outline-none ring-2 ring-turmeric ring-offset-2 ring-offset-cream;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-straw/30 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-straw rounded-full;
+}
+
+.pdf-a4 {
+  aspect-ratio: 210 / 297;
+  max-width: 480px;
+}
+
+button,
+a,
+input,
+select {
+  @apply transition-all duration-200;
 }

@@ -1,0 +1,10 @@
+[
+  { "cropId": "paddy", "riskLevel": 35, "season": "Kharif/Rabi" },
+  { "cropId": "sugarcane", "riskLevel": 20, "season": "Annual" },
+  { "cropId": "banana", "riskLevel": 45, "season": "Annual" },
+  { "cropId": "cotton", "riskLevel": 55, "season": "Rabi" },
+  { "cropId": "groundnut", "riskLevel": 40, "season": "Kharif" },
+  { "cropId": "maize", "riskLevel": 50, "season": "Kharif" },
+  { "cropId": "coconut", "riskLevel": 15, "season": "Perennial" },
+  { "cropId": "turmeric", "riskLevel": 30, "season": "Annual" }
+]

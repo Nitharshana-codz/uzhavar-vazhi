@@ -1,0 +1,10 @@
+[
+  { "id": "paddy", "en": "Paddy", "ta": "நெல்", "msp": 2183, "season": "Kharif/Rabi" },
+  { "id": "sugarcane", "en": "Sugarcane", "ta": "கரும்பு", "msp": 3150, "season": "Annual" },
+  { "id": "banana", "en": "Banana", "ta": "வாழை", "msp": null, "season": "Annual" },
+  { "id": "cotton", "en": "Cotton", "ta": "பருத்தி", "msp": 6620, "season": "Rabi" },
+  { "id": "groundnut", "en": "Groundnut", "ta": "நிலக்கடலை", "msp": 5950, "season": "Kharif" },
+  { "id": "maize", "en": "Maize", "ta": "மக்காச்சோளம்", "msp": 2250, "season": "Kharif" },
+  { "id": "coconut", "en": "Coconut", "ta": "தென்னை", "msp": null, "season": "Perennial" },
+  { "id": "turmeric", "en": "Turmeric", "ta": "மஞ்சள்", "msp": null, "season": "Annual" }
+]

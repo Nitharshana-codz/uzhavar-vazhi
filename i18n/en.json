@@ -1,0 +1,41 @@
+{
+  "appName": "Uzhavar Vazhi",
+  "appSubtitle": "Agricultural Finance for Tamil Nadu Farmers",
+  "language": "English",
+  "steps": {
+    "step1": {
+      "title": "Your Details",
+      "district": "District",
+      "crop": "Crop",
+      "landSize": "Land Size (acres)",
+      "ownership": "Land Ownership",
+      "owned": "Owned",
+      "tenant": "Tenant",
+      "leasehold": "Leasehold",
+      "nextBtn": "Check Eligibility →"
+    },
+    "step2": {
+      "title": "Eligibility",
+      "loanSchemes": "Loan Schemes",
+      "insurance": "Insurance Matches",
+      "maxLoan": "Maximum Loan Amount",
+      "seasonalRisk": "Seasonal Risk",
+      "resultsFor": "Eligibility Results for"
+    },
+    "step3": {
+      "title": "Your Profile",
+      "downloadPDF": "Download PDF",
+      "newFarmer": "New Farmer"
+    }
+  },
+  "common": {
+    "eligible": "Eligible",
+    "pending": "Pending",
+    "ineligible": "Ineligible",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "error": "Error",
+    "loading": "Loading..."
+  }
+}
