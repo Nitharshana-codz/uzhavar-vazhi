@@ -1,0 +1,33 @@
+{
+  "id": "TN-COIMBATORE",
+  "name": {
+    "en": "Coimbatore",
+    "ta": "கோயம்புத்தூர்"
+  },
+  "region": "Western Tamil Nadu",
+  "agro_climatic_zone": "Western Zone",
+  "headquarters": "Coimbatore",
+  "annual_rainfall_mm": 690,
+  "major_crops": [
+    "cotton",
+    "maize",
+    "turmeric",
+    "coconut"
+  ],
+  "banks": [
+    "dccb_coimbatore"
+  ],
+  "available_schemes": [
+    "kcc",
+    "pmfby",
+    "tn_interest_free_crop_loan"
+  ],
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal; Tamil Nadu Department of Agriculture and Farmers Welfare",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/; https://www.tnagriculture.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

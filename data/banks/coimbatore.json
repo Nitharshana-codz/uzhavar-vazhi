@@ -1,0 +1,21 @@
+{
+  "district": "TN-COIMBATORE",
+  "banks": [
+    {
+      "id": "dccb_coimbatore",
+      "name": "Coimbatore District Central Cooperative Bank",
+      "latitude": 11.016,
+      "longitude": 76.955,
+      "phone": "",
+      "website": ""
+    }
+  ],
+  "metadata": {
+    "source": "Tamil Nadu District Central Cooperative Bank websites and State Cooperative Department",
+    "source_url": "https://www.tncu.tn.gov.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

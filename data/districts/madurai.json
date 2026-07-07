@@ -1,0 +1,33 @@
+{
+  "id": "TN-MADURAI",
+  "name": {
+    "en": "Madurai",
+    "ta": "மதுரை"
+  },
+  "region": "Southern Tamil Nadu",
+  "agro_climatic_zone": "Southern Zone",
+  "headquarters": "Madurai",
+  "annual_rainfall_mm": 840,
+  "major_crops": [
+    "paddy",
+    "maize",
+    "cotton",
+    "coconut"
+  ],
+  "banks": [
+    "dccb_madurai"
+  ],
+  "available_schemes": [
+    "kcc",
+    "pmfby",
+    "nabard"
+  ],
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal; Tamil Nadu Department of Agriculture and Farmers Welfare",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/; https://www.tnagriculture.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}
