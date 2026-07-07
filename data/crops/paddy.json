@@ -1,0 +1,34 @@
+{
+  "id": "paddy",
+  "name": {
+    "en": "Paddy",
+    "ta": "நெல்"
+  },
+  "category": "Cereal",
+  "season": [
+    "Kuruvai",
+    "Samba",
+    "Navarai"
+  ],
+  "water_requirement": "High",
+  "temperature": {
+    "min": 20,
+    "max": 37
+  },
+  "rainfall": {
+    "min": 800,
+    "max": 1200
+  },
+  "humidity": {
+    "min": 60,
+    "max": 85
+  },
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

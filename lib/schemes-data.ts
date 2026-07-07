@@ -1,88 +1,130 @@
-// lib/schemes-data.ts
-// This file stores the rules for loan schemes and insurance schemes.
-// Our eligibility API route will read this file and match farmers against these rules.
+import kcc from "@/data/schemes/kcc.json";
+import nabard from "@/data/schemes/nabard.json";
+import pmfby from "@/data/schemes/pmfby.json";
+import tnInterestFreeCropLoan from "@/data/schemes/tn_interest_free_crop_loan.json";
 
-// Blueprint for a loan scheme
+import aadhaar from "@/data/documents/aadhaar.json";
+import bankPassbook from "@/data/documents/bank_passbook.json";
+import chitta from "@/data/documents/chitta.json";
+import cropSowingCertificate from "@/data/documents/crop_sowing_certificate.json";
+import landRecord from "@/data/documents/land_record.json";
+import patta from "@/data/documents/patta.json";
+import photo from "@/data/documents/photo.json";
+
+import type { DataMetadata } from "./district-data";
+
 export type LoanScheme = {
-  id: string;                 // unique short code, e.g. "kcc"
-  name: string;                // English name
-  tamilName: string;           // Tamil name
-  provider: string;            // who offers it
-  maxAmount: number;           // maximum loan amount in rupees
-  interestRate: string;        // interest rate as text (e.g. "4%")
-  minLandAcres: number;        // minimum land size required to qualify
-  allowsTenant: boolean;       // true if tenant farmers (not just owners) can apply
-  documents: string[];         // documents needed
+  id: string;
+  name: string;
+  tamilName: string;
+  provider: string;
+  maxAmount: number | null;
+  interestRate: string;
+  minLandAcres: number;
+  allowsTenant: boolean;
+  documents: string[];
+  documentIds: string[];
+  metadata: DataMetadata;
 };
 
-// Blueprint for an insurance scheme
 export type InsuranceScheme = {
   id: string;
   name: string;
   tamilName: string;
-  coverage: string;            // what it protects against
-  premiumRate: string;         // cost to the farmer
-  eligibleCrops: string[];     // which crops this applies to ("All" means every crop)
+  coverage: string;
+  premiumRate: string;
+  eligibleCrops: string[];
+  documents: string[];
+  documentIds: string[];
+  metadata: DataMetadata;
 };
 
-// All loan schemes we support right now
+type RawScheme = {
+  id: string;
+  name: {
+    en: string;
+    ta: string;
+  };
+  interest_rate?: number;
+  collateral_free_limit?: number;
+  tenant_farmer: boolean;
+  documents: string[];
+  metadata: unknown;
+};
+type RawDocument = typeof aadhaar;
+
+const DOCUMENTS_BY_ID: Record<string, RawDocument> = {
+  aadhaar,
+  bank_passbook: bankPassbook,
+  chitta,
+  crop_sowing_certificate: cropSowingCertificate,
+  land_record: landRecord,
+  patta,
+  photo,
+};
+
+function documentName(documentId: string): string {
+  return DOCUMENTS_BY_ID[documentId]?.name.en ?? documentId;
+}
+
+function interestRateText(rate: number | undefined): string {
+  return typeof rate === "number" ? `${rate}%` : "Varies by bank and scheme";
+}
+
+function toLoanScheme(
+  rawScheme: RawScheme,
+  provider: string,
+  maxAmount: number | null,
+  minLandAcres = 0
+): LoanScheme {
+  return {
+    id: rawScheme.id,
+    name: rawScheme.name.en,
+    tamilName: rawScheme.name.ta,
+    provider,
+    maxAmount,
+    interestRate: interestRateText(rawScheme.interest_rate),
+    minLandAcres,
+    allowsTenant: rawScheme.tenant_farmer,
+    documents: rawScheme.documents.map(documentName),
+    documentIds: rawScheme.documents,
+    metadata: rawScheme.metadata as DataMetadata,
+  };
+}
+
 export const LOAN_SCHEMES: LoanScheme[] = [
-  {
-    id: "kcc",
-    name: "Kisan Credit Card (KCC)",
-    tamilName: "கிசான் கிரெடிட் கார்டு",
-    provider: "Nationalised & Cooperative Banks",
-    maxAmount: 300000,
-    interestRate: "4% (with government subvention)",
-    minLandAcres: 0.5,
-    allowsTenant: true,
-    documents: ["Aadhaar card", "Land record (patta/chitta)", "Bank passbook", "Passport photo"],
-  },
-  {
-    id: "nabard-short-term",
-    name: "NABARD Short-Term Crop Loan",
-    tamilName: "நபார்டு குறுகிய கால பயிர் கடன்",
-    provider: "NABARD via Cooperative Banks",
-    maxAmount: 100000,
-    interestRate: "7% (subsidised)",
-    minLandAcres: 0.25,
-    allowsTenant: true,
-    documents: ["Aadhaar card", "Patta/chitta", "Crop sowing certificate"],
-  },
-  {
-    id: "tn-coop-loan",
-    name: "TN Cooperative Crop Loan",
-    tamilName: "தமிழ்நாடு கூட்டுறவு பயிர் கடன்",
-    provider: "Tamil Nadu State Cooperative Bank",
-    maxAmount: 150000,
-    interestRate: "3% (TN govt subsidy)",
-    minLandAcres: 0.5,
-    allowsTenant: false,
-    documents: ["Aadhaar card", "Cooperative society membership", "Land ownership proof"],
-  },
+  toLoanScheme(
+    kcc,
+    "Nationalised, commercial, regional rural, and cooperative banks",
+    kcc.collateral_free_limit
+  ),
+  toLoanScheme(
+    nabard,
+    "NABARD through eligible banks and financial institutions",
+    null
+  ),
+  toLoanScheme(
+    tnInterestFreeCropLoan,
+    "Tamil Nadu cooperative credit institutions",
+    null
+  ),
 ];
 
-// All insurance schemes we support right now
 export const INSURANCE_SCHEMES: InsuranceScheme[] = [
   {
-    id: "pmfby",
-    name: "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
-    tamilName: "பிரதம மந்திரி பயிர் காப்பீடு திட்டம்",
-    coverage: "Crop loss due to drought, flood, pest, disease, or natural calamity",
-    premiumRate: "2% for Kharif crops, 1.5% for Rabi crops",
-    eligibleCrops: ["Rice", "Cotton", "Groundnut", "Maize", "Sugarcane"],
-  },
-  {
-    id: "rwbcis",
-    name: "Restructured Weather Based Crop Insurance Scheme",
-    tamilName: "மறுகட்டமைக்கப்பட்ட வானிலை அடிப்படையிலான பயிர் காப்பீடு",
-    coverage: "Losses from rainfall, temperature, or humidity deviation",
-    premiumRate: "Approx. 4-6%, varies by district",
+    id: pmfby.id,
+    name: pmfby.name.en,
+    tamilName: pmfby.name.ta,
+    coverage:
+      "Crop insurance coverage for notified risks, crops, areas, and seasons as defined by official PMFBY notifications",
+    premiumRate: "Varies by crop, season, and official notification",
     eligibleCrops: ["All"],
+    documents: pmfby.documents.map(documentName),
+    documentIds: pmfby.documents,
+    metadata: pmfby.metadata as DataMetadata,
   },
 ];
 
-// Helper: find loan schemes a farmer qualifies for based on land size and tenant status
 export function getEligibleLoans(landAcres: number, isTenant: boolean): LoanScheme[] {
   return LOAN_SCHEMES.filter((scheme) => {
     const meetsLandRequirement = landAcres >= scheme.minLandAcres;
@@ -91,14 +133,20 @@ export function getEligibleLoans(landAcres: number, isTenant: boolean): LoanSche
   });
 }
 
-// Helper: find insurance schemes that cover a specific crop
 export function getEligibleInsurance(crop: string): InsuranceScheme[] {
   return INSURANCE_SCHEMES.filter((scheme) => {
     return (
       scheme.eligibleCrops.includes("All") ||
       scheme.eligibleCrops.some(
-        (c) => c.toLowerCase() === crop.toLowerCase()
+        (eligibleCrop) => eligibleCrop.toLowerCase() === crop.toLowerCase()
       )
     );
   });
+}
+
+export function getSchemeResearchMetadata(id: string): DataMetadata | undefined {
+  const scheme = [...LOAN_SCHEMES, ...INSURANCE_SCHEMES].find(
+    (entry) => entry.id === id
+  );
+  return scheme?.metadata;
 }

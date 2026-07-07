@@ -1,0 +1,32 @@
+{
+  "id": "TN-THANJAVUR",
+  "name": {
+    "en": "Thanjavur",
+    "ta": "தஞ்சாவூர்"
+  },
+  "region": "Cauvery Delta",
+  "agro_climatic_zone": "Cauvery Delta Zone",
+  "headquarters": "Thanjavur",
+  "annual_rainfall_mm": 950,
+  "major_crops": [
+    "paddy",
+    "coconut",
+    "maize"
+  ],
+  "banks": [
+    "dccb_thanjavur"
+  ],
+  "available_schemes": [
+    "kcc",
+    "pmfby",
+    "tn_interest_free_crop_loan"
+  ],
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal; Tamil Nadu Department of Agriculture and Farmers Welfare",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/; https://www.tnagriculture.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "district": "TN-SALEM",
+  "banks": [
+    {
+      "id": "dccb_salem",
+      "name": "Salem District Central Cooperative Bank",
+      "latitude": 11.664,
+      "longitude": 78.146,
+      "phone": "",
+      "website": ""
+    }
+  ],
+  "metadata": {
+    "source": "Tamil Nadu District Central Cooperative Bank websites and State Cooperative Department",
+    "source_url": "https://www.tncu.tn.gov.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

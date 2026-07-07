@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       breakdown,
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Something went wrong processing your request" },
       { status: 500 }

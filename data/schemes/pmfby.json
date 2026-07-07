@@ -1,0 +1,22 @@
+{
+  "id": "pmfby",
+  "name": {
+    "en": "Pradhan Mantri Fasal Bima Yojana",
+    "ta": "பிரதான் மந்திரி பயிர் காப்பீட்டு திட்டம்"
+  },
+  "type": "Insurance",
+  "tenant_farmer": true,
+  "documents": [
+    "aadhaar",
+    "bank_passbook",
+    "crop_sowing_certificate"
+  ],
+  "metadata": {
+    "source": "Official scheme portals and regulators",
+    "source_url": "https://agriwelfare.gov.in; https://pmfby.gov.in; https://www.nabard.org; https://www.rbi.org.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

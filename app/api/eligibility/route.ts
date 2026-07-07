@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       loans: eligibleLoans,
       insurance: eligibleInsurance,
     });
-  } catch (error) {
+  } catch {
     // If anything unexpected breaks, we send a clean error instead of crashing
     return NextResponse.json(
       { error: "Something went wrong processing your request" },

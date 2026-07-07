@@ -1,0 +1,32 @@
+{
+  "id": "TN-SALEM",
+  "name": {
+    "en": "Salem",
+    "ta": "சேலம்"
+  },
+  "region": "Western Tamil Nadu",
+  "agro_climatic_zone": "North Western Zone",
+  "headquarters": "Salem",
+  "annual_rainfall_mm": 850,
+  "major_crops": [
+    "maize",
+    "cotton",
+    "turmeric",
+    "ragi"
+  ],
+  "banks": [
+    "dccb_salem"
+  ],
+  "available_schemes": [
+    "kcc",
+    "pmfby"
+  ],
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal; Tamil Nadu Department of Agriculture and Farmers Welfare",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/; https://www.tnagriculture.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

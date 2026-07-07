@@ -1,0 +1,19 @@
+{
+  "season": "2025-26",
+  "currency": "INR",
+  "unit": "quintal",
+  "prices": {
+    "paddy_common": 2369,
+    "maize": 2400,
+    "cotton_medium": 7710,
+    "ragi": 4886
+  },
+  "metadata": {
+    "source": "Commission for Agricultural Costs and Prices; Department of Agriculture and Farmers Welfare",
+    "source_url": "https://cacp.dacnet.nic.in; https://agriwelfare.gov.in",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "maize",
+  "name": {
+    "en": "Maize",
+    "ta": "மக்காச்சோளம்"
+  },
+  "category": "Cereal",
+  "season": [
+    "Kharif",
+    "Rabi"
+  ],
+  "water_requirement": "Medium",
+  "temperature": {
+    "min": 18,
+    "max": 32
+  },
+  "rainfall": {
+    "min": 450,
+    "max": 800
+  },
+  "humidity": {
+    "min": 50,
+    "max": 75
+  },
+  "metadata": {
+    "source": "Tamil Nadu Agricultural University Agritech Portal",
+    "source_url": "https://agritech.tnau.ac.in/agriculture/",
+    "last_verified": null,
+    "verification_status": "needs_official_verification",
+    "verified_by": "Team Member 3",
+    "notes": "Draft starter data. Verify field values against the listed official source before farmer-facing use. Metadata added on 2026-07-07."
+  }
+}
