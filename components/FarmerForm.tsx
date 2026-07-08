@@ -21,6 +21,25 @@ export interface FarmerData {
   ownership: string;
   ownershipTa: string;
   cropMsp: number | null;
+  eligibility?: {
+    loans: {
+      name: string;
+      provider: string;
+      maxAmount: number | null;
+      interestRate: string;
+      documents: string[];
+    }[];
+    insurance: {
+      name: string;
+      coverage: string;
+      premiumRate: string;
+    }[];
+  };
+  riskData?: {
+    riskScore: number;
+    riskLevel: string;
+    advice: string;
+  };
 }
 
 export function FarmerForm({ onSubmit }: FarmerFormProps) {
@@ -40,22 +59,64 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
     if (!district || !crop || !ownership) return;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
 
-    onSubmit({
-      district,
-      districtTa,
-      crop,
-      cropTa,
-      landSize,
-      ownership,
-      ownershipTa,
-      cropMsp,
-    });
+    try {
+      const isTenant = ownership === 'tenant';
+
+      const [eligibilityRes, riskRes] = await Promise.all([
+        fetch('/api/eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            district,
+            crop,
+            landAcres: landSize,
+            isTenant,
+          }),
+        }),
+        fetch('/api/risk-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            district,
+            crop,
+            landAcres: landSize,
+            isTenant,
+          }),
+        }),
+      ]);
+
+      const eligibility = await eligibilityRes.json();
+      const riskData = await riskRes.json();
+
+      onSubmit({
+        district,
+        districtTa,
+        crop,
+        cropTa,
+        landSize,
+        ownership,
+        ownershipTa,
+        cropMsp,
+        eligibility,
+        riskData,
+      });
+    } catch (error) {
+      console.error('API error:', error);
+      onSubmit({
+        district,
+        districtTa,
+        crop,
+        cropTa,
+        landSize,
+        ownership,
+        ownershipTa,
+        cropMsp,
+      });
+    }
+
     setIsLoading(false);
   };
-
-  const selectedCropData = crops.find((c) => c.en === crop);
 
   return (
     <motion.div
@@ -96,7 +157,10 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
                 <ChevronDown className="h-4 w-4 text-soil/50" />
               </SelectPrimitive.Trigger>
               <SelectPrimitive.Portal>
-                <SelectPrimitive.Content className="relative z-50 max-h-80 overflow-auto rounded-lg border border-straw bg-white py-1 shadow-lg" style={{ width: 'var(--radix-select-trigger-width)' }}>
+                <SelectPrimitive.Content
+                  className="relative z-50 max-h-80 overflow-auto rounded-lg border border-straw bg-white py-1 shadow-lg"
+                  style={{ width: 'var(--radix-select-trigger-width)' }}
+                >
                   {districts.map((d) => (
                     <SelectPrimitive.Item
                       key={d.en}
@@ -146,7 +210,10 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
                 <ChevronDown className="h-4 w-4 text-soil/50" />
               </SelectPrimitive.Trigger>
               <SelectPrimitive.Portal>
-                <SelectPrimitive.Content className="relative z-50 max-h-80 overflow-auto rounded-lg border border-straw bg-white py-1 shadow-lg" style={{ width: 'var(--radix-select-trigger-width)' }}>
+                <SelectPrimitive.Content
+                  className="relative z-50 max-h-80 overflow-auto rounded-lg border border-straw bg-white py-1 shadow-lg"
+                  style={{ width: 'var(--radix-select-trigger-width)' }}
+                >
                   {crops.map((c) => (
                     <SelectPrimitive.Item
                       key={c.en}
@@ -244,7 +311,7 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
             {isLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Checking...</span>
+                <span>Checking eligibility...</span>
               </>
             ) : (
               <>

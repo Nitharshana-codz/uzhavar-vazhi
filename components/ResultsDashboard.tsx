@@ -15,37 +15,17 @@ interface ResultsDashboardProps {
 export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }: ResultsDashboardProps) {
   const { t, lang } = useI18n();
 
-  const isHighEligibility = farmerData.landSize >= 2 && farmerData.ownership === 'owned';
-  const maxLoanAmount = farmerData.landSize >= 2 ? 180000 : Math.floor(farmerData.landSize * 90000);
+  const loans = farmerData.eligibility?.loans || [];
+  const insurance = farmerData.eligibility?.insurance || [];
+  const riskScore = farmerData.riskData?.riskScore || 0;
+  const riskLevel = farmerData.riskData?.riskLevel || 'Low';
+  const riskAdvice = farmerData.riskData?.advice || '';
 
-  const schemes = [
-    {
-      en: 'KCC',
-      ta: 'கிசான் கடன் அட்டை',
-      eligible: true,
-      tooltip: 'Kisan Credit Card for farmers',
-    },
-    {
-      en: 'Cooperative loan',
-      ta: 'கூட்டுறவு கடன்',
-      eligible: true,
-      tooltip: 'District cooperative bank loan',
-    },
-    {
-      en: 'NABARD scheme',
-      ta: 'நபார்டு திட்டம்',
-      eligible: farmerData.landSize >= 2,
-      tooltip: 'NABARD farmer development scheme',
-    },
-  ];
+  const isHighEligibility = loans.length >= 2;
+  const maxLoanAmount = loans.length > 0
+    ? Math.max(...loans.map((l) => l.maxAmount || 0))
+    : farmerData.landSize >= 2 ? 180000 : Math.floor(farmerData.landSize * 90000);
 
-  const insuranceSchemes = [
-    { en: 'PMFBY', ta: 'PMFBY', eligible: true },
-    { en: 'TN Delta Relief', ta: 'டெல்டா நிவாரணம்', eligible: true },
-  ];
-
-  const seasonRisk = farmerData.crop === 'Paddy' ? 45 : 30;
-  const riskLevel = seasonRisk > 40 ? 'medium' : 'low';
   const mspValue = farmerData.cropMsp || 2183;
 
   return (
@@ -60,7 +40,7 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ duration: 0.4 }}
         className="bg-paddy rounded-xl p-5 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div className="text-white">
@@ -76,48 +56,36 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
               {isHighEligibility ? t.results.high : t.results.medium}
             </p>
           </div>
-          <div
-            className={cn(
-              'w-14 h-14 rounded-full flex items-center justify-center',
-              isHighEligibility ? 'bg-green-500' : 'bg-amber-500'
-            )}
-          >
-            {isHighEligibility ? (
-              <Check className="w-7 h-7 text-white" />
-            ) : (
-              <AlertCircle className="w-7 h-7 text-white" />
-            )}
+          <div className={cn('w-14 h-14 rounded-full flex items-center justify-center', isHighEligibility ? 'bg-green-500' : 'bg-amber-500')}>
+            {isHighEligibility ? <Check className="w-7 h-7 text-white" /> : <AlertCircle className="w-7 h-7 text-white" />}
           </div>
         </div>
       </motion.div>
 
       {/* Results grid */}
       <div className="grid md:grid-cols-2 gap-4">
+
         {/* Loan schemes */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           className="bg-white rounded-xl border border-straw p-5"
         >
           <h3 className="font-semibold text-soil mb-1">{t.results.loanSchemes}</h3>
           <p className="font-tamil text-paddy text-sm mb-3">{lang === 'en' ? 'கடன் திட்டங்கள்' : ''}</p>
           <div className="flex flex-wrap gap-2">
-            {schemes.map((s) => (
-              <div
-                key={s.en}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-sm flex items-center gap-1',
-                  s.eligible ? 'bg-paddy-light text-paddy' : 'bg-amber-100 text-amber-700'
-                )}
-              >
-                {s.eligible && <Check className="w-3 h-3" />}
-                {!s.eligible && <AlertCircle className="w-3 h-3" />}
-                <span>{s.en}</span>
-                <span className="font-tamil text-xs opacity-70">({s.ta})</span>
-                <span title={s.tooltip}><Info className="w-3 h-3 opacity-50 cursor-help" /></span>
+            {loans.length > 0 ? loans.map((loan) => (
+              <div key={loan.name} className="px-3 py-1.5 rounded-full text-sm bg-paddy-light text-paddy flex items-center gap-1">
+                <Check className="w-3 h-3" />
+                <span>{loan.name}</span>
+                <span title={`${loan.provider} — ${loan.interestRate}`}>
+                  <Info className="w-3 h-3 opacity-50 cursor-help" />
+                </span>
               </div>
-            ))}
+            )) : (
+              <p className="text-soil/60 text-sm">No loan data available</p>
+            )}
           </div>
           <p className="mt-4 text-soil">
             <span className="text-2xl font-semibold text-paddy">₹{maxLoanAmount.toLocaleString()}</span>
@@ -129,23 +97,23 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ delay: 0.2, duration: 0.4 }}
           className="bg-white rounded-xl border border-straw p-5"
         >
           <h3 className="font-semibold text-soil mb-1">{t.results.insurance}</h3>
           <p className="font-tamil text-paddy text-sm mb-3">{lang === 'en' ? 'காப்பீட்டு திட்டங்கள்' : ''}</p>
           <div className="flex flex-wrap gap-2">
-            {insuranceSchemes.map((s) => (
-              <div
-                key={s.en}
-                className="px-3 py-1.5 rounded-full text-sm bg-paddy-light text-paddy flex items-center gap-1"
-              >
+            {insurance.length > 0 ? insurance.map((ins) => (
+              <div key={ins.name} className="px-3 py-1.5 rounded-full text-sm bg-paddy-light text-paddy flex items-center gap-1">
                 <Check className="w-3 h-3" />
-                <span>{s.en}</span>
-                <span className="font-tamil text-xs opacity-70">({s.ta})</span>
-                <span title="Click to see how to apply"><Info className="w-3 h-3 opacity-50 cursor-help" /></span>
+                <span>{ins.name}</span>
+                <span title="Click to see how to apply">
+                  <Info className="w-3 h-3 opacity-50 cursor-help" />
+                </span>
               </div>
-            ))}
+            )) : (
+              <p className="text-soil/60 text-sm">No insurance data available</p>
+            )}
           </div>
         </motion.div>
 
@@ -153,7 +121,7 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ delay: 0.3, duration: 0.4 }}
           className="bg-white rounded-xl border border-straw p-5"
         >
           <h3 className="font-semibold text-soil mb-1">{t.results.mspToday}</h3>
@@ -171,7 +139,7 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ delay: 0.4, duration: 0.4 }}
           className="bg-white rounded-xl border border-straw p-5"
         >
           <h3 className="font-semibold text-soil mb-1">{t.results.seasonRisk}</h3>
@@ -180,12 +148,9 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
             <div className="relative h-3 bg-straw rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: '0%' }}
-                animate={{ width: `${seasonRisk}%` }}
+                animate={{ width: `${riskScore}%` }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                className={cn(
-                  'absolute top-0 left-0 h-full rounded-full',
-                  riskLevel === 'low' ? 'bg-paddy' : 'bg-amber-500'
-                )}
+                className={cn('absolute top-0 left-0 h-full rounded-full', riskScore > 55 ? 'bg-red-500' : riskScore > 30 ? 'bg-amber-500' : 'bg-paddy')}
               />
             </div>
             <div className="flex justify-between text-xs text-soil/60">
@@ -195,12 +160,10 @@ export function ResultsDashboard({ farmerData, onGeneratePDF, onChangeDetails }:
             </div>
           </div>
           <p className="mt-2 text-sm font-medium text-soil">
-            {riskLevel === 'medium' ? t.results.risk.medium : t.results.risk.low}
-            <span className="text-soil/60 ml-1">— {t.results.risk.monsoonImpact}</span>
+            {riskLevel}
+            {riskAdvice && <span className="text-soil/60 ml-1">— {riskAdvice}</span>}
           </p>
-          <p className="font-tamil text-xs text-paddy mt-1">
-            {riskLevel === 'medium' ? 'வடகிழக்கு பருவமழை தாக்கம்' : 'குறைந்த ஆபத்து'}
-          </p>
+          <p className="text-xs text-soil/50 mt-1">Score: {riskScore}/100</p>
         </motion.div>
       </div>
 

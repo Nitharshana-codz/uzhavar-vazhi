@@ -6,12 +6,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-type AutoTableDoc = jsPDF & {
-  lastAutoTable?: {
-    finalY: number;
-  };
-};
-
 // This type describes all the data we need to build the PDF
 export type FarmerProfile = {
   // Farmer's input
@@ -24,7 +18,7 @@ export type FarmerProfile = {
   loans: {
     name: string;
     provider: string;
-    maxAmount: number | null;
+    maxAmount: number;
     interestRate: string;
     documents: string[];
   }[];
@@ -33,6 +27,14 @@ export type FarmerProfile = {
     coverage: string;
     premiumRate: string;
   }[];
+   // Add this inside the FarmerProfile type, after the insurance array:
+  mspData?: {
+    mspPerQuintal: number;
+    mspPerKg: number;
+    expectedAtMSP: number;
+    lostToMiddlemen: number;
+    message: string;
+ } | null;
   // Risk results (from /api/risk-score)
   riskScore: number;
   riskLevel: string;
@@ -144,9 +146,7 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     body: profile.loans.map((loan) => [
       loan.name,
       loan.provider,
-      loan.maxAmount === null
-        ? "Varies by bank/product"
-        : `₹${loan.maxAmount.toLocaleString("en-IN")}`,
+      `Rs.${loan.maxAmount.toLocaleString("en-IN")}`,
       loan.interestRate,
     ]),
     headStyles: {
@@ -159,7 +159,7 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
-  y = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? y) + 10;
+  y = (doc as any).lastAutoTable.finalY + 10;
 
   // ── Documents Needed ─────────────────────────────────────────────────────
   if (profile.loans.length > 0) {
@@ -210,8 +210,75 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
-  y = ((doc as AutoTableDoc).lastAutoTable?.finalY ?? y) + 10;
+  y = (doc as any).lastAutoTable.finalY + 10;
 
+// ── MSP Price Section ────────────────────────────────────────────────────
+  if (profile.mspData) {
+    // Check if we need a new page
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setTextColor(22, 101, 52);
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("MSP Price Information (2026-27)", margin, y);
+    y += 6;
+
+    doc.setDrawColor(22, 101, 52);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // MSP price box
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 40, 3, 3, "F");
+    doc.setDrawColor(34, 197, 94);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 40, 3, 3, "S");
+
+    doc.setTextColor(22, 101, 52);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `${profile.mspData.crop} MSP: Rs. ${profile.mspData.mspPerKg}/kg  (Rs. ${profile.mspData.mspPerQuintal}/quintal)`,
+      margin + 8,
+      y + 12
+    );
+
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+
+    // Revenue comparison
+    doc.text(
+      `Estimated revenue at MSP price:  Rs. ${profile.mspData.revenueAtMSP.toLocaleString("en-IN")}`,
+      margin + 8,
+      y + 24
+    );
+    doc.setTextColor(185, 28, 28);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `Amount lost to middlemen:  Rs. ${profile.mspData.lostToMiddlemen.toLocaleString("en-IN")} (claim MSP to recover this)`,
+      margin + 8,
+      y + 34
+    );
+
+    y += 50;
+
+    // Advisory note
+    doc.setTextColor(120, 53, 15);
+    doc.setFillColor(255, 247, 237);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 16, 3, 3, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      "To claim MSP: Contact your nearest PACS cooperative or Agriculture Officer with this document.",
+      margin + 5,
+      y + 10
+    );
+    y += 24;
+  }
+  
   // ── Footer ───────────────────────────────────────────────────────────────
   doc.setFillColor(243, 244, 246);
   doc.rect(0, 282, pageWidth, 15, "F");

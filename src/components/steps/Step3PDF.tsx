@@ -1,16 +1,14 @@
 'use client';
 
-import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Download, Share2, ArrowLeft, RotateCcw } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { Download, Share2, ArrowLeft, RotateCcw, ChevronDown } from 'lucide-react';
 import type { FarmerData } from '../../../app/page';
 import districts from '@/data/districts.json';
 import crops from '@/data/crops.json';
 import schemes from '@/data/schemes.json';
 import riskMatrix from '@/data/riskMatrix.json';
+import { generateFarmerPDF } from '@/lib/generate-pdf';
 
 interface Step3PDFProps {
   farmerData: FarmerData;
@@ -33,7 +31,6 @@ function isSchemeEligible(scheme: (typeof schemes)[number], farmerData: FarmerDa
 export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
   const { t, i18n } = useTranslation();
   const isTamil = i18n.language === 'ta';
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const district = districts.find((d) => d.id === farmerData.district);
   const crop = crops.find((c) => c.id === farmerData.crop);
@@ -41,28 +38,61 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
   const riskLevel = riskData?.riskLevel ?? 50;
 
   const eligibleSchemes = schemes.filter((s) => isSchemeEligible(s, farmerData));
+  const eligibleLoans = eligibleSchemes
+    .filter((s) => s.type === 'loan')
+    .map((s) => ({
+      name: s.en,
+      tamilName: s.ta,
+      provider: s.id === 'cooperative' ? 'Tamil Nadu Cooperative Bank' : s.id === 'nabard' ? 'NABARD linked banks' : 'Commercial and cooperative banks',
+      maxAmount: s.maxAmount ?? null,
+      interestRate: s.id === 'kcc' ? '4%' : s.id === 'cooperative' ? '0-7%' : '7%',
+      documents: ['Aadhaar', 'Bank passbook', 'Land or lease proof', 'Crop details'],
+    }));
+  const eligibleInsurance = eligibleSchemes
+    .filter((s) => s.type === 'insurance')
+    .map((s) => ({
+      name: s.en,
+      tamilName: s.ta,
+      coverage: s.id === 'pmfby' ? 'Crop loss due to weather and notified risks' : 'Government notified crop relief support',
+      premiumRate: s.id === 'pmfby' ? '1.5-5%' : 'No farmer premium',
+    }));
 
   const riskLabel =
     riskLevel <= 33 ? 'Low' : riskLevel <= 66 ? 'Medium' : 'High';
   const riskLabelTa =
     riskLevel <= 33 ? 'குறைந்த' : riskLevel <= 66 ? 'நடுத்தரம்' : 'அதிக';
 
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
-
-    const canvas = await html2canvas(reportRef.current, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
+  const handleDownloadPDF = () => {
+    generateFarmerPDF({
+      farmerName: farmerData.farmerName,
+      district: district?.en ?? farmerData.district,
+      districtTamilName: district?.ta ?? '',
+      crop: crop?.en ?? farmerData.crop,
+      landAcres: farmerData.landSize,
+      isTenant: farmerData.ownership === 'tenant' || farmerData.ownership === 'leasehold',
+      loans: eligibleLoans,
+      insurance: eligibleInsurance,
+      riskScore: riskLevel,
+      riskLevel: riskLabel,
+      advice: riskLevel <= 33 ? 'Low seasonal risk. Continue normal planning with insurance backup.' : riskLevel <= 66 ? 'Moderate seasonal risk. Keep crop insurance active and monitor rainfall.' : 'High seasonal risk. Prefer formal credit and reduce exposure.',
+      mspData: crop?.msp
+        ? {
+            crop: crop.en,
+            mspPerQuintal: crop.msp,
+            mspPerKg: crop.msp / 100,
+            revenueAtMSP: Math.round((crop.msp / 100) * farmerData.landSize * 1000),
+            lostToMiddlemen: Math.round(crop.msp * farmerData.landSize * 0.15),
+            message: 'MSP reference generated from the selected crop profile.',
+          }
+        : undefined,
     });
+  };
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save(`farmer-profile-${farmerData.farmerName.replace(/\s+/g, '-')}.pdf`);
+  const scrollToRiskRows = () => {
+    document.getElementById('risk-summary-row')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
   };
 
   const handleWhatsAppShare = () => {
@@ -109,13 +139,12 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.4 }}
-      className="max-w-xl mx-auto px-4 pb-8"
+      className="max-w-xl mx-auto px-4 pb-16"
     >
       <motion.div
-        ref={reportRef}
-        className="bg-white rounded-xl shadow-md border border-straw overflow-hidden flex flex-col pdf-a4 mx-auto w-full"
+        className="bg-white rounded-xl shadow-md border border-straw flex flex-col mx-auto w-full"
       >
-        <div className="bg-paddy p-4 text-white">
+        <div className="bg-paddy p-4 text-white rounded-t-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 flex items-center justify-center">
@@ -172,7 +201,16 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
               </div>
             ))}
 
-            <div className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50">
+            <button
+              type="button"
+              onClick={scrollToRiskRows}
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-turmeric-light rounded-lg border border-turmeric/20 text-xs font-bold text-turmeric"
+            >
+              View risk & MSP
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            <div id="risk-summary-row" className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50">
               <div>
                 <span className="text-xs font-bold text-soil/70">{t('pdf.fields.seasonalRisk')}</span>
                 <br />

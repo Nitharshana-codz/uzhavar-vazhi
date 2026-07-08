@@ -1,13 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n/context';
 import { FarmerData } from './FarmerForm';
 import { Download, Share2, ArrowLeft, RotateCcw, Wheat } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generateFarmerPDF } from '@/lib/generate-pdf';
 
 interface PDFProfilePreviewProps {
   farmerData: FarmerData;
@@ -16,27 +13,30 @@ interface PDFProfilePreviewProps {
 }
 
 export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfilePreviewProps) {
-  const { t, lang } = useI18n();
-  const pdfRef = useRef<HTMLDivElement>(null);
+  const { t } = useI18n();
+  const previewData = farmerData as FarmerData & {
+    farmerName?: string;
+    name?: string;
+    season?: string;
+  };
 
-  const maxLoanAmount = farmerData.landSize >= 2 ? 180000 : Math.floor(farmerData.landSize * 90000);
+  const maxLoanAmount = farmerData.eligibility?.loans?.length
+    ? Math.max(...farmerData.eligibility.loans.map((l) => l.maxAmount || 0))
+    : farmerData.landSize >= 2 ? 180000 : Math.floor(farmerData.landSize * 90000);
 
-  const handleDownloadPDF = async () => {
-    if (!pdfRef.current) return;
-
-    const canvas = await html2canvas(pdfRef.current, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
+  const handleDownloadPDF = () => {
+    generateFarmerPDF({
+      district: farmerData.district,
+      districtTamilName: farmerData.districtTa,
+      crop: farmerData.crop,
+      landAcres: farmerData.landSize,
+      isTenant: farmerData.ownership === 'tenant',
+      loans: farmerData.eligibility?.loans || [],
+      insurance: farmerData.eligibility?.insurance || [],
+      riskScore: farmerData.riskData?.riskScore || 0,
+      riskLevel: farmerData.riskData?.riskLevel || 'Low',
+      advice: farmerData.riskData?.advice || '',
     });
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('Uzhavar-Vazhi-Farmer-Profile.pdf');
   };
 
   const handleWhatsAppShare = () => {
@@ -58,15 +58,14 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-120 mx-auto px-4"
+      className="w-full max-w-[480px] mx-auto px-4 pb-16"
     >
       {/* PDF Preview Card */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        className="bg-white shadow-md rounded-lg overflow-hidden"
-        ref={pdfRef}
+        className="bg-white shadow-md rounded-lg"
       >
         {/* Header */}
         <div className="bg-paddy p-4 flex items-center justify-between">
@@ -85,8 +84,11 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
 
         {/* Body */}
         <div className="p-5">
-          {/* Farmer Details */}
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+            <div>
+              <p className="text-soil/60 text-xs">Farmer Name</p>
+              <p className="font-medium text-soil">{previewData.farmerName || previewData.name || 'Farmer'}</p>
+            </div>
             <div>
               <p className="text-soil/60 text-xs">{t.profile.district}</p>
               <p className="font-medium text-soil">{farmerData.district}</p>
@@ -96,6 +98,10 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
               <p className="text-soil/60 text-xs">{t.profile.crop}</p>
               <p className="font-medium text-soil">{farmerData.crop}</p>
               <p className="font-tamil text-paddy text-xs">{farmerData.cropTa}</p>
+            </div>
+            <div>
+              <p className="text-soil/60 text-xs">Season</p>
+              <p className="font-medium text-soil">{previewData.season || 'Current season'}</p>
             </div>
             <div>
               <p className="text-soil/60 text-xs">{t.profile.landSize}</p>
@@ -108,72 +114,42 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
             </div>
           </div>
 
-          {/* Divider */}
           <div className="my-4 border-t border-straw" />
 
-          {/* Eligibility Results */}
           <div className="space-y-2.5 text-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-soil">KCC Eligibility</span>
-                <span className="font-tamil text-paddy text-xs ml-2">கிசான் கடன் அட்டை</span>
+            {farmerData.eligibility?.loans?.map((loan) => (
+              <div key={loan.name} className="flex items-center justify-between">
+                <span className="text-soil">{loan.name}</span>
+                <span className="text-paddy font-medium flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
+                  ₹{(loan.maxAmount || 0).toLocaleString()}
+                </span>
               </div>
-              <span className="text-paddy font-medium flex items-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
-                Eligible — ₹{maxLoanAmount.toLocaleString()}
-              </span>
-            </div>
+            ))}
 
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-soil">PMFBY Insurance</span>
-                <span className="font-tamil text-paddy text-xs ml-2">PMFBY</span>
+            {farmerData.eligibility?.insurance?.map((ins) => (
+              <div key={ins.name} className="flex items-center justify-between">
+                <span className="text-soil">{ins.name}</span>
+                <span className="text-paddy font-medium flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
+                  Matched
+                </span>
               </div>
-              <span className="text-paddy font-medium flex items-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
-                Matched
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-soil">Cooperative Loan</span>
-                <span className="font-tamil text-paddy text-xs ml-2">கூட்டுறவு கடன்</span>
-              </div>
-              <span className="text-paddy font-medium flex items-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
-                Eligible
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-soil">NABARD Scheme</span>
-                <span className="font-tamil text-paddy text-xs ml-2">நபார்டு திட்டம்</span>
-              </div>
-              <span className="text-amber-600 font-medium flex items-center gap-1">
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">!</span>
-                Verify at branch
-              </span>
-            </div>
+            ))}
 
             <div className="flex items-center justify-between">
               <span className="text-soil">Seasonal Risk</span>
-              <span className="font-medium text-soil">
-                {farmerData.crop === 'Paddy' ? 'Medium' : 'Low'}
-              </span>
+              <span className="font-medium text-soil">{farmerData.riskData?.riskLevel || 'Medium'}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-soil">MSP Reference</span>
-              <span className="font-medium text-soil">
-                ₹{(farmerData.cropMsp || 2183).toLocaleString()}/quintal
-              </span>
+              <span className="font-medium text-soil">₹{(farmerData.cropMsp || 2183).toLocaleString()}/quintal</span>
             </div>
 
             <div className="flex items-start justify-between">
               <span className="text-soil">{t.profile.nearestBranch}</span>
-              <span className="text-right text-soil/80 text-xs max-w-37.5">
+              <span className="text-right text-soil/80 text-xs max-w-[150px]">
                 {farmerData.district} Central Cooperative Bank
               </span>
             </div>
