@@ -45,6 +45,42 @@ type ResultsData = {
 const formatINR = (value?: number | null) =>
   typeof value === "number" ? `Rs. ${value.toLocaleString("en-IN")}` : "Varies";
 
+const TAMIL_FONT_NAME = "NotoSansTamil";
+const TAMIL_FONT_FILE = "NotoSansTamil-Regular.ttf";
+const TAMIL_FONT_URL =
+  "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/unhinted/ttf/NotoSansTamil/NotoSansTamil-Regular.ttf";
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+
+  for (let index = 0; index < bytes.byteLength; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+
+  return window.btoa(binary);
+}
+
+async function registerTamilFont(doc: jsPDF): Promise<string> {
+  try {
+    const response = await fetch(TAMIL_FONT_URL);
+
+    if (!response.ok) {
+      throw new Error(`Font request failed with ${response.status}`);
+    }
+
+    const fontBuffer = await response.arrayBuffer();
+    doc.addFileToVFS(TAMIL_FONT_FILE, arrayBufferToBase64(fontBuffer));
+    doc.addFont(TAMIL_FONT_FILE, TAMIL_FONT_NAME, "normal");
+    doc.addFont(TAMIL_FONT_FILE, TAMIL_FONT_NAME, "bold");
+
+    return TAMIL_FONT_NAME;
+  } catch (error) {
+    console.warn("Could not load Tamil font, falling back to standard font.", error);
+    return "helvetica";
+  }
+}
+
 export async function generateFarmerPDF(farmerData: FarmerData, passedResults?: ResultsData) {
   const results: ResultsData = passedResults ?? {
     loans: farmerData.loans,
@@ -68,6 +104,8 @@ export async function generateFarmerPDF(farmerData: FarmerData, passedResults?: 
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   let y = 18;
+  const bodyFont = await registerTamilFont(doc);
+  const cleanDistrict = farmerData.district.replace(/^&|&$/g, "").replace(/&/g, "");
   const mspPerQuintal = results.msp?.mspPerQuintal ?? results.msp?.varieties?.[0]?.mspPerQuintal;
 
   doc.setFillColor(59, 109, 17);
@@ -94,9 +132,10 @@ export async function generateFarmerPDF(farmerData: FarmerData, passedResults?: 
     theme: "grid",
     styles: { fontSize: 10, cellPadding: 3, lineColor: [232, 213, 176] },
     headStyles: { fillColor: [250, 238, 218], textColor: [44, 44, 42] },
+    bodyStyles: { font: bodyFont },
     body: [
       ["Farmer", farmerData.farmerName ?? "Farmer"],
-      ["District", farmerData.districtTamilName ? `${farmerData.district} (${farmerData.districtTamilName})` : farmerData.district],
+      ["District", farmerData.districtTamilName ? `${cleanDistrict} (${farmerData.districtTamilName})` : cleanDistrict],
       ["Crop", farmerData.crop],
       ["Land", `${farmerData.landSize ?? farmerData.landAcres ?? 0} acres`],
       ["Ownership", farmerData.ownership ?? (farmerData.isTenant ? "tenant" : "owned")],
@@ -130,7 +169,7 @@ export async function generateFarmerPDF(farmerData: FarmerData, passedResults?: 
     body: (results.loans ?? []).map((loan) => [loan.name ?? "-", loan.provider ?? "-", formatINR(loan.maxAmount), loan.interestRate ?? "Varies"]),
     headStyles: { fillColor: [59, 109, 17], textColor: 255 },
     alternateRowStyles: { fillColor: [234, 243, 222] },
-    styles: { fontSize: 9, cellPadding: 3 },
+    styles: { font: bodyFont, fontSize: 9, cellPadding: 3 },
   });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
 
@@ -149,10 +188,10 @@ export async function generateFarmerPDF(farmerData: FarmerData, passedResults?: 
     ],
     headStyles: { fillColor: [212, 136, 42], textColor: 255 },
     alternateRowStyles: { fillColor: [250, 238, 218] },
-    styles: { fontSize: 9, cellPadding: 3 },
+    styles: { font: bodyFont, fontSize: 9, cellPadding: 3 },
   });
 
-  const fileName = `farmer-profile-${farmerData.farmerName || "profile"}`
+  const fileName = `farmer-profile-${farmerData.farmerName || cleanDistrict || "profile"}`
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-");
   doc.save(`${fileName}.pdf`);
