@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Download, Share2, ArrowLeft, RotateCcw, ChevronDown } from 'lucide-react';
+import { Download, Share2, ArrowLeft, RotateCcw, ChevronDown, Loader2 } from 'lucide-react';
 import type { FarmerData } from '../../../app/page';
 import districts from '@/data/districts.json';
 import crops from '@/data/crops.json';
@@ -31,6 +32,7 @@ function isSchemeEligible(scheme: (typeof schemes)[number], farmerData: FarmerDa
 export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
   const { t, i18n } = useTranslation();
   const isTamil = i18n.language === 'ta';
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const district = districts.find((d) => d.id === farmerData.district);
   const crop = crops.find((c) => c.id === farmerData.crop);
@@ -38,54 +40,62 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
   const riskLevel = riskData?.riskLevel ?? 50;
 
   const eligibleSchemes = schemes.filter((s) => isSchemeEligible(s, farmerData));
-  const eligibleLoans = eligibleSchemes
-    .filter((s) => s.type === 'loan')
-    .map((s) => ({
-      name: s.en,
-      tamilName: s.ta,
-      provider: s.id === 'cooperative' ? 'Tamil Nadu Cooperative Bank' : s.id === 'nabard' ? 'NABARD linked banks' : 'Commercial and cooperative banks',
-      maxAmount: s.maxAmount ?? null,
-      interestRate: s.id === 'kcc' ? '4%' : s.id === 'cooperative' ? '0-7%' : '7%',
-      documents: ['Aadhaar', 'Bank passbook', 'Land or lease proof', 'Crop details'],
-    }));
-  const eligibleInsurance = eligibleSchemes
-    .filter((s) => s.type === 'insurance')
-    .map((s) => ({
-      name: s.en,
-      tamilName: s.ta,
-      coverage: s.id === 'pmfby' ? 'Crop loss due to weather and notified risks' : 'Government notified crop relief support',
-      premiumRate: s.id === 'pmfby' ? '1.5-5%' : 'No farmer premium',
-    }));
-
   const riskLabel =
     riskLevel <= 33 ? 'Low' : riskLevel <= 66 ? 'Medium' : 'High';
   const riskLabelTa =
     riskLevel <= 33 ? 'குறைந்த' : riskLevel <= 66 ? 'நடுத்தரம்' : 'அதிக';
 
-  const handleDownloadPDF = () => {
-    generateFarmerPDF({
-      farmerName: farmerData.farmerName,
-      district: district?.en ?? farmerData.district,
-      districtTamilName: district?.ta ?? '',
-      crop: crop?.en ?? farmerData.crop,
+  const handleDownloadPDF = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    const pdfDistrict = district?.en ?? farmerData.district;
+    const pdfCrop = crop?.en ?? farmerData.crop;
+    const payload = {
+      district: pdfDistrict,
+      crop: pdfCrop,
       landAcres: farmerData.landSize,
       isTenant: farmerData.ownership === 'tenant' || farmerData.ownership === 'leasehold',
-      loans: eligibleLoans,
-      insurance: eligibleInsurance,
-      riskScore: riskLevel,
-      riskLevel: riskLabel,
-      advice: riskLevel <= 33 ? 'Low seasonal risk. Continue normal planning with insurance backup.' : riskLevel <= 66 ? 'Moderate seasonal risk. Keep crop insurance active and monitor rainfall.' : 'High seasonal risk. Prefer formal credit and reduce exposure.',
-      mspData: crop?.msp
-        ? {
-            crop: crop.en,
-            mspPerQuintal: crop.msp,
-            mspPerKg: crop.msp / 100,
-            revenueAtMSP: Math.round((crop.msp / 100) * farmerData.landSize * 1000),
-            lostToMiddlemen: Math.round(crop.msp * farmerData.landSize * 0.15),
-            message: 'MSP reference generated from the selected crop profile.',
-          }
-        : undefined,
-    });
+    };
+
+    try {
+      const [eligibilityRes, riskRes, mspRes] = await Promise.all([
+        fetch('/api/eligibility', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+        fetch('/api/risk-score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+        fetch(`/api/msp?crop=${encodeURIComponent(pdfCrop)}&landAcres=${farmerData.landSize}`),
+      ]);
+
+      if (!eligibilityRes.ok || !riskRes.ok) {
+        throw new Error('Backend PDF data request failed');
+      }
+
+      const eligibility = await eligibilityRes.json();
+      const risk = await riskRes.json();
+      const msp = mspRes.ok ? await mspRes.json() : null;
+
+      await generateFarmerPDF(
+        {
+          farmerName: farmerData.farmerName,
+          district: eligibility.district ?? pdfDistrict,
+          districtTamilName: eligibility.districtTamilName ?? district?.ta ?? '',
+          crop: pdfCrop,
+          landSize: farmerData.landSize,
+          ownership: farmerData.ownership,
+        },
+        {
+          loans: eligibility.loans ?? [],
+          insurance: eligibility.insurance ?? [],
+          districtTamilName: eligibility.districtTamilName,
+          riskScore: risk.riskScore ?? riskLevel,
+          riskLevel: risk.riskLevel ?? riskLabel,
+          advice: risk.advice ?? 'Use insurance and formal credit for safer planning.',
+          msp,
+          eligibilityLevel: (eligibility.loans?.length ?? 0) >= 2 ? 'high' : (eligibility.loans?.length ?? 0) > 0 ? 'medium' : 'low',
+        },
+      );
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const scrollToRiskRows = () => {
@@ -260,12 +270,13 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
       <div className="space-y-3 mt-6 max-w-xl mx-auto">
         <motion.button
           onClick={handleDownloadPDF}
+          disabled={isDownloading}
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full py-4 rounded-lg font-semibold text-white bg-turmeric shadow-lg shadow-turmeric/30 hover:bg-turmeric/90 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-lg font-semibold text-white bg-turmeric shadow-lg shadow-turmeric/30 hover:bg-turmeric/90 disabled:opacity-70 flex items-center justify-center gap-2"
         >
-          <Download className="w-5 h-5 stroke-[2.5]" />
-          <span>{t('pdf.actions.download.en')}</span>
+          {isDownloading ? <Loader2 className="w-5 h-5 stroke-[2.5] animate-spin" /> : <Download className="w-5 h-5 stroke-[2.5]" />}
+          <span>{isDownloading ? 'Preparing PDF' : t('pdf.actions.download.en')}</span>
           <span className="font-tamil text-sm">— {t('pdf.actions.download.ta')}</span>
         </motion.button>
 

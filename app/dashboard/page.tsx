@@ -21,6 +21,7 @@ type FarmerData = {
 type Results = {
   loans: { id: string; name: string; tamilName?: string; provider: string; maxAmount: number | null; interestRate: string }[];
   insurance: { id: string; name: string; tamilName?: string; coverage: string; premiumRate: string }[];
+  districtTamilName?: string;
   riskScore: number;
   riskLevel: string;
   advice: string;
@@ -93,6 +94,7 @@ export default function DashboardPage() {
       setResults({
         loans: eligibility.loans ?? [],
         insurance: eligibility.insurance ?? [],
+        districtTamilName: eligibility.districtTamilName,
         riskScore: risk.riskScore ?? 0,
         riskLevel: risk.riskLevel ?? 'Calculated',
         advice: risk.advice ?? risk.tamilAdvice ?? 'Use insurance and formal credit for safer planning.',
