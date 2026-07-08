@@ -1,48 +1,61 @@
 "use client";
+import { useState } from "react";
 import { generateFarmerPDF } from "@/lib/generate-pdf";
 
 export default function TestPDF() {
-  function handleTest() {
-    generateFarmerPDF({
-      district: "Thanjavur",
-      districtTamilName: "தஞ்சாவூர்",
-      crop: "Paddy",
-      landAcres: 2,
-      isTenant: false,
-      loans: [
-        {
-          name: "Kisan Credit Card (KCC)",
-          provider: "Nationalised & Cooperative Banks",
-          maxAmount: 300000,
-          interestRate: "4% (with government subvention)",
-          documents: [
-            "Aadhaar card",
-            "Land record (patta/chitta)",
-            "Bank passbook",
-            "Passport photo",
-          ],
-        },
-      ],
-      insurance: [
-        {
-          name: "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
-          coverage: "Crop loss due to drought, flood, pest, disease",
-          premiumRate: "2% for Kharif crops",
-        },
-      ],
-      riskScore: 35,
-      riskLevel: "Low Risk",
-      advice: "This season looks favorable. Good time to plan crop investments.",
-      mspData: {
+  // Added a visual loading state while the font is being downloaded and configured
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Changed to an async function to handle font downloading sequences sequentially
+  async function handleTest() {
+    setIsGenerating(true);
+    try {
+      await generateFarmerPDF({
+        district: "Thanjavur",
+        districtTamilName: "தஞ்சாவூர்",
         crop: "Paddy",
-        mspPerQuintal: 2441,
-        mspPerKg: 24.41,
-        revenueAtMSP: 58584,
-        lostToMiddlemen: 10545,
-        message:
-          "By selling at MSP instead of market price, you could earn Rs. 10,545 more this season",
-      },
-    });
+        landAcres: 2,
+        isTenant: false,
+        loans: [
+          {
+            name: "Kisan Credit Card (KCC)",
+            provider: "Nationalised & Cooperative Banks",
+            maxAmount: 300000,
+            interestRate: "4% (with government subvention)",
+            documents: [
+              "Aadhaar card",
+              "Land record (patta/chitta)",
+              "Bank passbook",
+              "Passport photo",
+            ],
+          },
+        ],
+        insurance: [
+          {
+            name: "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
+            coverage: "Crop loss due to drought, flood, pest, disease",
+            premiumRate: "2% for Kharif crops",
+          },
+        ],
+        riskScore: 35,
+        riskLevel: "Low Risk",
+        advice: "This season looks favorable. Good time to plan crop investments.",
+        mspData: {
+          crop: "Paddy",
+          mspPerQuintal: 2441,
+          mspPerKg: 24.41,
+          revenueAtMSP: 58584,
+          lostToMiddlemen: 10545,
+          message:
+            "By selling at MSP instead of market price, you could earn Rs. 10,545 more this season",
+        },
+      });
+    } catch (error) {
+      console.error("Error generating profile PDF:", error);
+      alert("Something went wrong while generating the PDF. Check console.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   return (
@@ -64,19 +77,22 @@ export default function TestPDF() {
         PDF should include MSP section showing Rs. 2,441/quintal
         and Rs. 10,545 lost to middlemen.
       </p>
+      
       <button
         onClick={handleTest}
+        disabled={isGenerating} // Disable button to prevent double triggering
         style={{
-          background: "#16a34a",
+          background: isGenerating ? "#86efac" : "#16a34a",
           color: "white",
           padding: "12px 32px",
           borderRadius: "12px",
           border: "none",
           fontSize: "16px",
-          cursor: "pointer",
+          cursor: isGenerating ? "not-allowed" : "pointer",
+          transition: "background 0.2s ease",
         }}
       >
-        Download Test PDF
+        {isGenerating ? "Downloading Font & Customizing PDF..." : "Download Test PDF"}
       </button>
     </main>
   );

@@ -1,20 +1,13 @@
 // lib/generate-pdf.ts
-// This function takes a farmer's complete results and generates a downloadable PDF.
-// It runs entirely in the browser — no server needed.
-// Member 2 will call this function when the farmer clicks "Download Profile".
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// This type describes all the data we need to build the PDF
 export type FarmerProfile = {
-  // Farmer's input
   district: string;
   districtTamilName: string;
   crop: string;
   landAcres: number;
   isTenant: boolean;
-  // Eligibility results (from /api/eligibility)
   loans: {
     name: string;
     provider: string;
@@ -27,26 +20,54 @@ export type FarmerProfile = {
     coverage: string;
     premiumRate: string;
   }[];
-   // Add this inside the FarmerProfile type, after the insurance array:
   mspData?: {
     mspPerQuintal: number;
     mspPerKg: number;
-    expectedAtMSP: number;
+    revenueAtMSP: number; // FIXED: Changed to match your usage below
     lostToMiddlemen: number;
     message: string;
- } | null;
-  // Risk results (from /api/risk-score)
+    crop?: string; // Added to match your usage below
+  } | null;
   riskScore: number;
   riskLevel: string;
   advice: string;
 };
 
-export function generateFarmerPDF(profile: FarmerProfile): void {
-  // Create a new PDF document (A4 size, portrait)
+// ── Helper to convert ArrayBuffer to Base64 for the browser
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+// NOTE: The function is now async because we must download the font first.
+export async function generateFarmerPDF(profile: FarmerProfile): Promise<void> {
   const doc = new jsPDF("portrait", "mm", "a4");
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let y = 20; // current vertical position on page
+  let y = 20;
+
+  // ── HOTFIX: Clean the '&' bug from the district name 
+  // If "Tirunelveli" comes in as "&T&i&r&u...", this strips the stray '&'s
+  const cleanDistrict = profile.district.replace(/^&|&$/g, "").replace(/&/g, "");
+
+  // ── Load Tamil Font (Noto Sans Tamil) ───────────────────────────────────
+  try {
+    // Fetching from a reliable open-source font CDN
+    const fontUrl = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/unhinted/ttf/NotoSansTamil/NotoSansTamil-Regular.ttf";
+    const response = await fetch(fontUrl);
+    const buffer = await response.arrayBuffer();
+    const base64Font = arrayBufferToBase64(buffer);
+
+    // Inject the font into jsPDF
+    doc.addFileToVFS("NotoSansTamil.ttf", base64Font);
+    doc.addFont("NotoSansTamil.ttf", "TamilFont", "normal");
+  } catch (error) {
+    console.warn("Could not load Tamil font, falling back to standard font.", error);
+  }
 
   // ── Header ──────────────────────────────────────────────────────────────
   doc.setFillColor(22, 101, 52); // dark green
@@ -77,10 +98,9 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
 
   doc.setTextColor(40, 40, 40);
   doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
 
   const details = [
-    ["District", `${profile.district} (${profile.districtTamilName})`],
+    ["District", `${cleanDistrict} (${profile.districtTamilName})`],
     ["Main Crop", profile.crop],
     ["Land Size", `${profile.landAcres} acres`],
     ["Farmer Type", profile.isTenant ? "Tenant Farmer" : "Land Owner"],
@@ -89,7 +109,9 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
   details.forEach(([label, value]) => {
     doc.setFont("helvetica", "bold");
     doc.text(`${label}:`, margin, y);
-    doc.setFont("helvetica", "normal");
+    
+    // Switch to Tamil font specifically for the value printing
+    doc.setFont("TamilFont", "normal");
     doc.text(value, margin + 35, y);
     y += 7;
   });
@@ -154,8 +176,12 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
       textColor: 255,
       fontStyle: "bold",
       fontSize: 9,
+      font: "helvetica" // Ensure headers use english font
     },
-    bodyStyles: { fontSize: 9 },
+    bodyStyles: { 
+      fontSize: 9,
+      font: "TamilFont" // Use Tamil font for body incase data has Tamil
+    },
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
@@ -169,14 +195,11 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     doc.text("Documents Needed for Loan Application", margin, y);
     y += 6;
 
-    // Collect unique documents across all eligible loans
-    const allDocs = [
-      ...new Set(profile.loans.flatMap((l) => l.documents)),
-    ];
+    const allDocs = [...new Set(profile.loans.flatMap((l) => l.documents))];
 
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("TamilFont", "normal"); // Use Tamil font for docs
     allDocs.forEach((docItem, i) => {
       doc.text(`${i + 1}. ${docItem}`, margin + 4, y);
       y += 6;
@@ -205,16 +228,19 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
       textColor: 255,
       fontStyle: "bold",
       fontSize: 9,
+      font: "helvetica"
     },
-    bodyStyles: { fontSize: 9 },
+    bodyStyles: { 
+      fontSize: 9,
+      font: "TamilFont" 
+    },
     alternateRowStyles: { fillColor: [240, 253, 244] },
   });
 
   y = (doc as any).lastAutoTable.finalY + 10;
 
-// ── MSP Price Section ────────────────────────────────────────────────────
+  // ── MSP Price Section ────────────────────────────────────────────────────
   if (profile.mspData) {
-    // Check if we need a new page
     if (y > 240) {
       doc.addPage();
       y = 20;
@@ -230,7 +256,6 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
 
-    // MSP price box
     doc.setFillColor(240, 253, 244);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 40, 3, 3, "F");
     doc.setDrawColor(34, 197, 94);
@@ -238,9 +263,9 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
 
     doc.setTextColor(22, 101, 52);
     doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("TamilFont", "bold");
     doc.text(
-      `${profile.mspData.crop} MSP: Rs. ${profile.mspData.mspPerKg}/kg  (Rs. ${profile.mspData.mspPerQuintal}/quintal)`,
+      `${profile.mspData.crop || profile.crop} MSP: Rs. ${profile.mspData.mspPerKg}/kg  (Rs. ${profile.mspData.mspPerQuintal}/quintal)`,
       margin + 8,
       y + 12
     );
@@ -249,7 +274,6 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
 
-    // Revenue comparison
     doc.text(
       `Estimated revenue at MSP price:  Rs. ${profile.mspData.revenueAtMSP.toLocaleString("en-IN")}`,
       margin + 8,
@@ -265,7 +289,6 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
 
     y += 50;
 
-    // Advisory note
     doc.setTextColor(120, 53, 15);
     doc.setFillColor(255, 247, 237);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 16, 3, 3, "F");
@@ -276,7 +299,6 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
       margin + 5,
       y + 10
     );
-    y += 24;
   }
   
   // ── Footer ───────────────────────────────────────────────────────────────
@@ -284,13 +306,17 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
   doc.rect(0, 282, pageWidth, 15, "F");
   doc.setTextColor(107, 114, 128);
   doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  
+  // Switch back to Tamil font to print the Tamil portion of the footer
+  doc.setFont("TamilFont", "normal");
   doc.text(
     "Generated by Uzhavar Vazhi | உழவர் வழி — Tamil Nadu Farmer Financial Readiness Platform",
     pageWidth / 2,
     289,
     { align: "center" }
   );
+  
+  doc.setFont("helvetica", "normal");
   doc.text(
     "This document is for reference only. Please verify scheme eligibility with your local bank or cooperative.",
     pageWidth / 2,
@@ -299,7 +325,6 @@ export function generateFarmerPDF(profile: FarmerProfile): void {
   );
 
   // ── Download ─────────────────────────────────────────────────────────────
-  // This triggers the browser's file download dialog
-  const fileName = `uzhavar-vazhi-${profile.district.toLowerCase()}-${profile.crop.toLowerCase()}.pdf`;
+  const fileName = `uzhavar-vazhi-${cleanDistrict.toLowerCase()}-${profile.crop.toLowerCase()}.pdf`;
   doc.save(fileName);
 }
