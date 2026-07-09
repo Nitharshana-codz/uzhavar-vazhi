@@ -19,6 +19,7 @@ type ChatApiResponse = {
 };
 
 const quickQuestions = [
+  { en: 'How do I use this website?', ta: 'இந்த இணையதளத்தை எப்படி பயன்படுத்துவது?', text: 'How do I use the Uzhavar Vazhi website to check loans, MSP, weather, and risk?' },
   { en: 'What loans am I eligible for?', ta: 'எனக்கு தகுதியான கடன்கள் என்ன?', text: 'What loans am I eligible for if I have 2 acres of paddy in Thanjavur?' },
   { en: 'How do I claim PMFBY insurance?', ta: 'PMFBY காப்பீடு எப்படி பெறுவது?', text: 'How do I claim PMFBY crop insurance?' },
   { en: 'What is the MSP for paddy?', ta: 'நெல்லின் MSP என்ன?', text: 'What is the current MSP for paddy?' },
@@ -81,10 +82,10 @@ export default function ChatPage() {
               {messages.length === 0 && (
                 <div>
                   <div className="rounded-xl border border-straw bg-cream p-4 mb-4">
-                    <p className="text-soil">Hello! Ask about schemes, loans, MSP, documents, weather, or eligibility.</p>
-                    <p className="font-tamil text-sm text-soil/60 mt-1">திட்டங்கள், கடன், MSP, ஆவணங்கள், வானிலை அல்லது தகுதி பற்றி கேளுங்கள்.</p>
+                    <p className="text-soil">Hello! Ask about using the website, schemes, loans, MSP, documents, weather, or eligibility.</p>
+                    <p className="font-tamil text-sm text-soil/60 mt-1">இணையதள பயன்பாடு, திட்டங்கள், கடன், MSP, ஆவணங்கள், வானிலை அல்லது தகுதி பற்றி கேளுங்கள்.</p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {quickQuestions.map((question) => (
                       <button key={question.text} onClick={() => submitQuestion(question.text)} className="text-left rounded-lg border border-straw p-4 hover:border-turmeric bg-white">
                         <p className="font-medium text-soil">{question.en}</p>
