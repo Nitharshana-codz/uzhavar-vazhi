@@ -20,6 +20,20 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## AI Chatbot Setup
+
+The `/chat` page uses the server route at `/api/chat`, which calls OpenRouter from the backend so the API key is never exposed to the browser.
+
+Create a local `.env.local` file:
+
+```bash
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=openai/gpt-4o-mini
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Then restart the dev server. Do not commit `.env.local` or paste API keys into JSON/data files.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

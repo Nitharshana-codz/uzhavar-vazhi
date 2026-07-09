@@ -12,6 +12,12 @@ type Message = {
   timestamp: string;
 };
 
+type ChatApiResponse = {
+  response?: string;
+  error?: string;
+  suggestions?: string[];
+};
+
 const quickQuestions = [
   { en: 'What loans am I eligible for?', ta: 'எனக்கு தகுதியான கடன்கள் என்ன?', text: 'What loans am I eligible for if I have 2 acres of paddy in Thanjavur?' },
   { en: 'How do I claim PMFBY insurance?', ta: 'PMFBY காப்பீடு எப்படி பெறுவது?', text: 'How do I claim PMFBY crop insurance?' },
@@ -38,8 +44,12 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: question, language: lang, history: messages.map(({ role, content }) => ({ role, content })) }),
       });
-      const data = await response.json();
-      setMessages((current) => [...current, { role: 'assistant', content: data.response, timestamp: new Date().toLocaleTimeString() }]);
+      const data = (await response.json()) as ChatApiResponse;
+      const fallbackMessage = lang === 'ta'
+        ? 'மன்னிக்கவும், இப்போது பதில் கிடைக்கவில்லை. சிறிது நேரம் கழித்து முயற்சிக்கவும்.'
+        : 'Sorry, I could not get an answer right now. Please try again shortly.';
+      const assistantMessage = data.response ?? data.error ?? fallbackMessage;
+      setMessages((current) => [...current, { role: 'assistant', content: assistantMessage, timestamp: new Date().toLocaleTimeString() }]);
       setSuggestions(data.suggestions ?? []);
     } catch {
       setMessages((current) => [...current, { role: 'assistant', content: lang === 'ta' ? 'மன்னிக்கவும், இணைப்பு தோல்வியடைந்தது. மீண்டும் முயற்சிக்கவும்.' : 'Sorry, I could not connect. Please try again.', timestamp: new Date().toLocaleTimeString() }]);

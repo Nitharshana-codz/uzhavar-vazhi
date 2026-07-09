@@ -1,28 +1,164 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const answers = {
-  loans: "For most small farmers, the strongest first options are Kisan Credit Card, cooperative crop loan, and NABARD-linked short term crop credit. Use the Dashboard page with district, crop, land size, and ownership to get matched results.",
-  pmfby: "For PMFBY, keep Aadhaar, bank passbook, land or lease proof, and sowing certificate ready. Report crop loss quickly through the bank, insurer, or local agriculture office so field verification can happen on time.",
-  msp: "MSP is the government-declared minimum support price. For paddy in this app, the 2026-27 reference value is Rs. 2,441 per quintal for common paddy.",
-  weather: "Use the Weather page to select your district and fetch a 7-day forecast. If rainfall is high, avoid fresh pesticide spraying and check drainage before sowing.",
+type ChatRole = "user" | "assistant";
+
+type IncomingMessage = {
+  role?: unknown;
+  content?: unknown;
 };
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const message = String(body.message ?? "").toLowerCase();
-  const language = body.language === "ta" ? "ta" : "en";
-  let response = answers.loans;
+type OpenRouterMessage = {
+  role: "system" | ChatRole;
+  content: string;
+};
 
-  if (message.includes("pmfby") || message.includes("insurance") || message.includes("claim")) response = answers.pmfby;
-  if (message.includes("msp") || message.includes("price") || message.includes("paddy")) response = answers.msp;
-  if (message.includes("weather") || message.includes("rain")) response = answers.weather;
+type OpenRouterResponse = {
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+  error?: {
+    message?: string;
+  };
+};
 
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "openai/gpt-4o-mini";
+const APP_TITLE = "Uzhavar Vazhi";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+const SUGGESTIONS = {
+  en: [
+    "Check my eligibility",
+    "What documents are needed?",
+    "Explain PMFBY claims",
+  ],
+  ta: [
+    "என் தகுதியை சரிபார்க்கவும்",
+    "எந்த ஆவணங்கள் தேவை?",
+    "PMFBY கோரிக்கை விளக்கவும்",
+  ],
+};
+
+function getSystemPrompt(language: "en" | "ta"): string {
+  return [
+    "You are Uzhavar AI, a careful assistant for Tamil Nadu farmers using the Uzhavar Vazhi app.",
+    "Help with crop loans, Kisan Credit Card, PMFBY crop insurance, NABARD-linked support, MSP, documents, weather risk, and basic app navigation.",
+    "Use simple language, short paragraphs, and practical next steps.",
+    "Do not invent official rates, scheme limits, or eligibility rules. If the information depends on district, season, crop, bank, insurer, or a government notification, say that it must be verified with the official portal, local agriculture office, cooperative society, or bank.",
+    "Do not ask for Aadhaar numbers, bank account numbers, OTPs, passwords, or private financial details.",
+    "This is educational support, not final financial, legal, or government advice.",
+    language === "ta"
+      ? "Reply primarily in Tamil. You may include English scheme names like KCC, PMFBY, NABARD, and MSP where useful."
+      : "Reply in English. Include Tamil terms only when helpful.",
+  ].join("\n");
+}
+
+function cleanContent(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function cleanHistory(history: unknown): OpenRouterMessage[] {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .slice(-8)
+    .map((message: IncomingMessage) => {
+      const role = message.role === "assistant" ? "assistant" : "user";
+      const content = cleanContent(message.content, 1500);
+      return content ? { role, content } : null;
+    })
+    .filter((message): message is OpenRouterMessage => message !== null);
+}
+
+function fallbackResponse(language: "en" | "ta"): string {
   if (language === "ta") {
-    response = `தமிழில் சுருக்கம்: ${response}`;
+    return "மன்னிக்கவும், AI சேவை இப்போது கிடைக்கவில்லை. உங்கள் கேள்விக்கு மாவட்டம், பயிர், நில அளவு, உரிமையாளர்/குத்தகை விவரம் போன்ற தகவல்களுடன் உள்ளூர் வங்கி அல்லது வேளாண்மை அலுவலகத்தில் உறுதி செய்யவும்.";
   }
 
-  return NextResponse.json({
-    response,
-    suggestions: ["Check my eligibility", "Show MSP prices", "What documents are needed?"],
-  });
+  return "Sorry, the AI service is not available right now. For farmer-facing decisions, verify district, crop, land size, ownership or tenancy, and scheme details with the local bank, cooperative society, or agriculture office.";
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const question = cleanContent(body.message, 1000);
+    const language = body.language === "ta" ? "ta" : "en";
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    if (!question) {
+      return NextResponse.json(
+        { error: "Message is required", suggestions: SUGGESTIONS[language] },
+        { status: 400 }
+      );
+    }
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error: "OPENROUTER_API_KEY is not configured",
+          response:
+            language === "ta"
+              ? "AI chatbot ஐ இயக்க OPENROUTER_API_KEY தேவை. அதை .env.local கோப்பில் சேர்த்து dev server ஐ restart செய்யவும்."
+              : "The AI chatbot needs OPENROUTER_API_KEY in .env.local. Add the key and restart the dev server.",
+          suggestions: SUGGESTIONS[language],
+        },
+        { status: 503 }
+      );
+    }
+
+    const messages: OpenRouterMessage[] = [
+      { role: "system", content: getSystemPrompt(language) },
+      ...cleanHistory(body.history),
+      { role: "user", content: question },
+    ];
+
+    const openRouterResponse = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": APP_URL,
+        "X-OpenRouter-Title": APP_TITLE,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL,
+        messages,
+        temperature: 0.35,
+        max_tokens: 700,
+      }),
+    });
+
+    const data = (await openRouterResponse.json()) as OpenRouterResponse;
+
+    if (!openRouterResponse.ok) {
+      return NextResponse.json(
+        {
+          error: data.error?.message ?? "OpenRouter request failed",
+          response: fallbackResponse(language),
+          suggestions: SUGGESTIONS[language],
+        },
+        { status: openRouterResponse.status }
+      );
+    }
+
+    const response = data.choices?.[0]?.message?.content?.trim();
+
+    return NextResponse.json({
+      response: response || fallbackResponse(language),
+      suggestions: SUGGESTIONS[language],
+      model: process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error: "Something went wrong processing the chat request",
+        response: fallbackResponse("en"),
+        suggestions: SUGGESTIONS.en,
+      },
+      { status: 500 }
+    );
+  }
 }
