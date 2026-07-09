@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Download, Share2, ArrowLeft, RotateCcw, ChevronDown, Loader2 } from 'lucide-react';
+import { Download, Share2, ArrowLeft, RotateCcw, Loader2 } from 'lucide-react';
 import type { FarmerData } from '../../../app/page';
 import districts from '@/data/districts.json';
 import crops from '@/data/crops.json';
-import schemes from '@/data/schemes.json';
-import riskMatrix from '@/data/riskMatrix.json';
 import { generateFarmerPDF } from '@/lib/generate-pdf';
+import { clearFarmerSession, loadFarmerSession, type FarmerSessionData } from '@/lib/farmer-session';
 
 interface Step3PDFProps {
   farmerData: FarmerData;
@@ -17,97 +16,68 @@ interface Step3PDFProps {
   onReset: () => void;
 }
 
-function isSchemeEligible(scheme: (typeof schemes)[number], farmerData: FarmerData): boolean {
-  const cropEligible =
-    scheme.eligibleCrops?.includes(farmerData.crop) ||
-    scheme.eligibleCrops?.includes('All');
-  const ownershipEligible = scheme.ownership?.includes(farmerData.ownership);
-  const landSizeOk =
-    farmerData.landSize >= (scheme.minLandSize || 0) &&
-    (!('maxLandSize' in scheme) || !scheme.maxLandSize || farmerData.landSize <= scheme.maxLandSize);
-  const districtEligible = !scheme.districts || scheme.districts.includes(farmerData.district);
-  return !!(cropEligible && ownershipEligible && landSizeOk && districtEligible);
-}
-
 export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
   const { t, i18n } = useTranslation();
   const isTamil = i18n.language === 'ta';
   const [isDownloading, setIsDownloading] = useState(false);
+  const [sessionData, setSessionData] = useState<FarmerSessionData | null>(null);
+
+  useEffect(() => {
+    setSessionData(loadFarmerSession());
+  }, []);
 
   const district = districts.find((d) => d.id === farmerData.district);
   const crop = crops.find((c) => c.id === farmerData.crop);
-  const riskData = riskMatrix.find((r) => r.cropId === farmerData.crop);
-  const riskLevel = riskData?.riskLevel ?? 50;
-
-  const eligibleSchemes = schemes.filter((s) => isSchemeEligible(s, farmerData));
-  const riskLabel =
-    riskLevel <= 33 ? 'Low' : riskLevel <= 66 ? 'Medium' : 'High';
-  const riskLabelTa =
-    riskLevel <= 33 ? 'குறைந்த' : riskLevel <= 66 ? 'நடுத்தரம்' : 'அதிக';
+  const loans = sessionData?.eligibility?.loans ?? [];
+  const insurance = sessionData?.eligibility?.insurance ?? [];
+  const riskScore = sessionData?.riskData?.riskScore ?? 0;
+  const riskLevel = sessionData?.riskData?.riskLevel ?? 'Medium';
+  const cropMsp = sessionData?.cropMsp ?? crop?.msp ?? 0;
 
   const handleDownloadPDF = async () => {
     if (isDownloading) return;
 
+    const advice = sessionData?.riskData?.advice || '';
+
+    console.log('Generating PDF with data:', {
+      loans,
+      insurance,
+      riskScore,
+      riskLevel,
+      advice,
+    });
+
     setIsDownloading(true);
-    const pdfDistrict = district?.en ?? farmerData.district;
-    const pdfCrop = crop?.en ?? farmerData.crop;
-    const payload = {
-      district: pdfDistrict,
-      crop: pdfCrop,
-      landAcres: farmerData.landSize,
-      isTenant: farmerData.ownership === 'tenant' || farmerData.ownership === 'leasehold',
-    };
-
     try {
-      const [eligibilityRes, riskRes, mspRes] = await Promise.all([
-        fetch('/api/eligibility', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-        fetch('/api/risk-score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
-        fetch(`/api/msp?crop=${encodeURIComponent(pdfCrop)}&landAcres=${farmerData.landSize}`),
-      ]);
-
-      if (!eligibilityRes.ok || !riskRes.ok) {
-        throw new Error('Backend PDF data request failed');
-      }
-
-      const eligibility = await eligibilityRes.json();
-      const risk = await riskRes.json();
-      const msp = mspRes.ok ? await mspRes.json() : null;
-
-      await generateFarmerPDF(
-        {
-          farmerName: farmerData.farmerName,
-          district: eligibility.district ?? pdfDistrict,
-          districtTamilName: eligibility.districtTamilName ?? district?.ta ?? '',
-          crop: pdfCrop,
-          landSize: farmerData.landSize,
-          ownership: farmerData.ownership,
-        },
-        {
-          loans: eligibility.loans ?? [],
-          insurance: eligibility.insurance ?? [],
-          districtTamilName: eligibility.districtTamilName,
-          riskScore: risk.riskScore ?? riskLevel,
-          riskLevel: risk.riskLevel ?? riskLabel,
-          advice: risk.advice ?? 'Use insurance and formal credit for safer planning.',
-          msp,
-          eligibilityLevel: (eligibility.loans?.length ?? 0) >= 2 ? 'high' : (eligibility.loans?.length ?? 0) > 0 ? 'medium' : 'low',
-        },
-      );
+      await generateFarmerPDF({
+        farmerName: farmerData.farmerName || '',
+        district: district?.en ?? farmerData.district,
+        districtTamilName: sessionData?.eligibility?.districtTamilName ?? district?.ta ?? '',
+        crop: crop?.en ?? farmerData.crop,
+        cropTamilName: crop?.ta,
+        landAcres: farmerData.landSize,
+        isTenant: farmerData.ownership === 'tenant' || farmerData.ownership === 'leasehold',
+        eligibility: loans.length > 0 ? 'high' : 'medium',
+        loans,
+        insurance,
+        riskScore,
+        riskLevel,
+        advice,
+        cropMsp: cropMsp || 0,
+      });
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const scrollToRiskRows = () => {
-    document.getElementById('risk-summary-row')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-  };
-
   const handleWhatsAppShare = () => {
     const text = `🌾 உழவர் வழி - Farmer Profile\n\n${farmerData.farmerName}\n${district?.ta} | ${crop?.ta} | ${farmerData.landSize} acres\n\nDownload from uzhavarvazhi.in`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleReset = () => {
+    clearFarmerSession();
+    onReset();
   };
 
   const detailRows = [
@@ -151,9 +121,7 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
       transition={{ duration: 0.4 }}
       className="max-w-xl mx-auto px-4 pb-16"
     >
-      <motion.div
-        className="bg-white rounded-xl shadow-md border border-straw flex flex-col mx-auto w-full"
-      >
+      <motion.div className="bg-white rounded-xl shadow-md border border-straw flex flex-col mx-auto w-full">
         <div className="bg-paddy p-4 text-white rounded-t-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -199,28 +167,43 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
           <div className="my-4 border-t-2 border-straw/30" />
 
           <div className="space-y-2">
-            {eligibleSchemes.map((s) => (
+            {loans.map((loan) => (
               <div
-                key={s.id}
+                key={loan.name}
                 className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50"
               >
-                <span className="text-xs font-bold text-soil/70">{isTamil ? s.ta : s.en}</span>
-                <span className="text-xs text-paddy font-bold font-tamil">
-                  ✓ {t('results.status.eligible.ta')}
+                <div>
+                  <span className="text-xs font-bold text-soil/70">{loan.name}</span>
+                  {loan.tamilName && (
+                    <span className="font-tamil text-paddy text-[10px] ml-2">{loan.tamilName}</span>
+                  )}
+                </div>
+                <span className="text-xs text-paddy font-bold flex items-center gap-1">
+                  <span>✓</span>
+                  ₹{(loan.maxAmount || 0).toLocaleString('en-IN')}
                 </span>
               </div>
             ))}
 
-            <button
-              type="button"
-              onClick={scrollToRiskRows}
-              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-turmeric-light rounded-lg border border-turmeric/20 text-xs font-bold text-turmeric"
-            >
-              View risk & MSP
-              <ChevronDown className="w-4 h-4" />
-            </button>
+            {insurance.map((ins) => (
+              <div
+                key={ins.name}
+                className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50"
+              >
+                <div>
+                  <span className="text-xs font-bold text-soil/70">{ins.name}</span>
+                  {ins.tamilName && (
+                    <span className="font-tamil text-paddy text-[10px] ml-2">{ins.tamilName}</span>
+                  )}
+                </div>
+                <span className="text-xs text-paddy font-bold flex items-center gap-1">
+                  <span>✓</span>
+                  {isTamil ? 'தகுதியானது' : 'Eligible'}
+                </span>
+              </div>
+            ))}
 
-            <div id="risk-summary-row" className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50">
+            <div className="flex justify-between items-center py-2 px-3 bg-white rounded-lg border border-straw/50">
               <div>
                 <span className="text-xs font-bold text-soil/70">{t('pdf.fields.seasonalRisk')}</span>
                 <br />
@@ -229,7 +212,7 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
                 </span>
               </div>
               <span className="text-xs font-bold text-soil">
-                {riskLabel} / <span className="font-tamil">{riskLabelTa}</span>
+                {riskLevel} ({riskScore}/100)
               </span>
             </div>
 
@@ -242,7 +225,7 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
                 </span>
               </div>
               <span className="text-xs font-bold text-paddy">
-                {crop?.msp ? `₹${crop.msp.toLocaleString('en-IN')} / ql` : isTamil ? 'MSP இல்லை' : 'N/A'}
+                ₹{(cropMsp || 0).toLocaleString('en-IN')}/quintal
               </span>
             </div>
 
@@ -303,7 +286,7 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
           </motion.button>
 
           <motion.button
-            onClick={onReset}
+            onClick={handleReset}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             className="flex-1 py-3 rounded-lg font-semibold text-paddy border-2 border-paddy hover:bg-paddy-light flex items-center justify-center gap-1.5 text-sm"

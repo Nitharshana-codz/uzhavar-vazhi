@@ -65,10 +65,56 @@ export function Step1Form({ onSubmit }: Step1FormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
+    if (!isFormValid || !selectedDistrictData || !selectedCropData) return;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    try {
+      const isTenant = ownership === 'tenant' || ownership === 'leasehold';
+      const payload = {
+        district: selectedDistrictData.en,
+        crop: selectedCropData.en,
+        landAcres: landSize,
+        isTenant,
+      };
+
+      const [eligibilityRes, riskRes] = await Promise.all([
+        fetch('/api/eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }),
+        fetch('/api/risk-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }),
+      ]);
+
+      const eligibility = await eligibilityRes.json();
+      const riskData = await riskRes.json();
+
+      console.log('Eligibility API response:', eligibility);
+      console.log('Risk API response:', riskData);
+
+      const { saveFarmerSession } = await import('@/lib/farmer-session');
+      saveFarmerSession({
+        eligibility: {
+          loans: eligibility.loans ?? [],
+          insurance: eligibility.insurance ?? [],
+          district: eligibility.district,
+          districtTamilName: eligibility.districtTamilName,
+        },
+        riskData: {
+          riskScore: riskData.riskScore ?? 0,
+          riskLevel: riskData.riskLevel ?? 'Low',
+          advice: riskData.advice ?? '',
+        },
+        cropMsp: selectedCropData.msp,
+      });
+    } catch (error) {
+      console.error('API error:', error);
+    }
 
     onSubmit({
       district: selectedDistrict,

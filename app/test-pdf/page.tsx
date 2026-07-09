@@ -40,15 +40,9 @@ export default function TestPDF() {
         riskScore: 35,
         riskLevel: "Low Risk",
         advice: "This season looks favorable. Good time to plan crop investments.",
-        mspData: {
-          crop: "Paddy",
-          mspPerQuintal: 2441,
-          mspPerKg: 24.41,
-          revenueAtMSP: 58584,
-          lostToMiddlemen: 10545,
-          message:
-            "By selling at MSP instead of market price, you could earn Rs. 10,545 more this season",
-        },
+        cropMsp: 2441,
+        estimatedRevenue: 48820,
+        projectedLoss: 8788,
       });
     } catch (error) {
       console.error("Error generating profile PDF:", error);

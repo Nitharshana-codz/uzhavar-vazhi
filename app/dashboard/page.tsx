@@ -19,7 +19,7 @@ type FarmerData = {
 };
 
 type Results = {
-  loans: { id: string; name: string; tamilName?: string; provider: string; maxAmount: number | null; interestRate: string }[];
+  loans: { id: string; name: string; tamilName?: string; provider: string; maxAmount: number | null; interestRate: string; documents?: string[] }[];
   insurance: { id: string; name: string; tamilName?: string; coverage: string; premiumRate: string }[];
   districtTamilName?: string;
   riskScore: number;
@@ -106,6 +106,35 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleDownloadPDF() {
+    if (!results) return;
+
+    const districtData = districts.find((district) => district.en === farmerData.district);
+    const cropData = crops.find((crop) => crop.en === farmerData.crop);
+    const cropMspValue = results.msp?.mspPerQuintal ?? results.msp?.varieties?.[0]?.mspPerQuintal ?? cropMsp?.mspPerQuintal ?? 0;
+    const estimatedRevenue = results.msp?.revenueProjection?.revenueAtMSP ?? cropMspValue * farmerData.landSize * 10;
+    const projectedLoss = results.msp?.revenueProjection?.lostToMiddlemen ?? estimatedRevenue * 0.18;
+
+    generateFarmerPDF({
+      farmerName: farmerData.farmerName,
+      district: farmerData.district,
+      districtTamilName: results.districtTamilName ?? districtData?.ta ?? '',
+      crop: farmerData.crop,
+      cropTamilName: results.msp?.tamilName ?? cropData?.ta,
+      landAcres: farmerData.landSize,
+      isTenant: farmerData.ownership !== 'owned',
+      eligibility: results.eligibilityLevel,
+      loans: results.loans.map((loan) => ({ ...loan, documents: loan.documents ?? [] })),
+      insurance: results.insurance,
+      riskScore: results.riskScore,
+      riskLevel: results.riskLevel,
+      advice: results.advice,
+      cropMsp: cropMspValue,
+      estimatedRevenue,
+      projectedLoss,
+    });
   }
 
   return (
@@ -216,7 +245,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => generateFarmerPDF(farmerData, results)} className="bg-turmeric text-white rounded-lg font-semibold py-3 px-6 shadow-lg shadow-turmeric/30 hover:bg-turmeric/90 flex items-center justify-center gap-2">
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={handleDownloadPDF} className="bg-turmeric text-white rounded-lg font-semibold py-3 px-6 shadow-lg shadow-turmeric/30 hover:bg-turmeric/90 flex items-center justify-center gap-2">
                   <Download className="w-4 h-4" /> Download PDF
                 </motion.button>
                 <button onClick={() => setResults(null)} className="border-2 border-paddy text-paddy rounded-lg py-3 px-6 hover:bg-paddy-light">Check another farmer</button>

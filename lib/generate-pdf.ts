@@ -1,4 +1,3 @@
-// lib/generate-pdf.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -6,325 +5,345 @@ export type FarmerProfile = {
   district: string;
   districtTamilName: string;
   crop: string;
+  cropTamilName?: string;
   landAcres: number;
   isTenant: boolean;
+  farmerName?: string;
+  eligibility?: string;
+  season?: string;
   loans: {
+    id?: string;
     name: string;
+    tamilName?: string;
     provider: string;
-    maxAmount: number;
+    maxAmount: number | null;
     interestRate: string;
     documents: string[];
   }[];
   insurance: {
+    id?: string;
     name: string;
+    tamilName?: string;
     coverage: string;
     premiumRate: string;
   }[];
-  mspData?: {
-    mspPerQuintal: number;
-    mspPerKg: number;
-    revenueAtMSP: number; // FIXED: Changed to match your usage below
-    lostToMiddlemen: number;
-    message: string;
-    crop?: string; // Added to match your usage below
-  } | null;
   riskScore: number;
   riskLevel: string;
   advice: string;
+  cropMsp?: number;
+  estimatedRevenue?: number;
+  projectedLoss?: number;
 };
 
-// ── Helper to convert ArrayBuffer to Base64 for the browser
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
+type LegacyFarmerData = {
+  farmerName?: string;
+  district: string;
+  districtTamilName?: string;
+  crop: string;
+  cropTamilName?: string;
+  landSize?: number;
+  landAcres?: number;
+  ownership?: string;
+  isTenant?: boolean;
+};
+
+type LegacyResultsData = {
+  loans?: FarmerProfile["loans"];
+  insurance?: FarmerProfile["insurance"];
+  districtTamilName?: string;
+  riskScore?: number;
+  riskLevel?: string;
+  advice?: string;
+  eligibilityLevel?: string;
+  msp?: {
+    crop?: string;
+    tamilName?: string;
+    mspPerQuintal?: number;
+    varieties?: { mspPerQuintal?: number }[];
+    revenueProjection?: { revenueAtMSP?: number; lostToMiddlemen?: number };
+  } | null;
+};
+
+const GREEN: [number, number, number] = [22, 101, 52];
+const LIGHT_GREEN: [number, number, number] = [240, 253, 244];
+const AMBER: [number, number, number] = [217, 119, 6];
+const RED: [number, number, number] = [220, 38, 38];
+const MUTED: [number, number, number] = [107, 114, 128];
+const PAGE_BOTTOM = 266;
+
+function pdfSafeText(value?: string | null): string {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// NOTE: The function is now async because we must download the font first.
-export async function generateFarmerPDF(profile: FarmerProfile): Promise<void> {
+function formatINR(value?: number | null): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? `Rs. ${value.toLocaleString("en-IN")}`
+    : "Varies";
+}
+
+function profileFromArgs(profile: FarmerProfile | LegacyFarmerData, results?: LegacyResultsData): FarmerProfile {
+  if ("loans" in profile && "insurance" in profile && "landAcres" in profile) {
+    return profile;
+  }
+
+  const cropMsp = results?.msp?.mspPerQuintal ?? results?.msp?.varieties?.[0]?.mspPerQuintal ?? 0;
+  const landAcres = profile.landAcres ?? profile.landSize ?? 0;
+  const estimatedRevenue = results?.msp?.revenueProjection?.revenueAtMSP ?? cropMsp * landAcres * 10;
+  const projectedLoss = results?.msp?.revenueProjection?.lostToMiddlemen ?? estimatedRevenue * 0.18;
+
+  return {
+    farmerName: profile.farmerName,
+    district: profile.district,
+    districtTamilName: profile.districtTamilName ?? results?.districtTamilName ?? "",
+    crop: profile.crop,
+    cropTamilName: profile.cropTamilName ?? results?.msp?.tamilName,
+    landAcres,
+    isTenant: profile.isTenant ?? (profile.ownership === "tenant" || profile.ownership === "leasehold"),
+    eligibility: results?.eligibilityLevel,
+    loans: results?.loans ?? [],
+    insurance: results?.insurance ?? [],
+    riskScore: results?.riskScore ?? 0,
+    riskLevel: results?.riskLevel ?? "Low",
+    advice: results?.advice ?? "",
+    cropMsp,
+    estimatedRevenue,
+    projectedLoss,
+  };
+}
+
+function ensureSpace(doc: jsPDF, y: number, requiredHeight: number): number {
+  if (y + requiredHeight <= PAGE_BOTTOM) {
+    return y;
+  }
+
+  doc.addPage();
+  return 18;
+}
+
+function sectionHeading(doc: jsPDF, title: string, margin: number, y: number, size = 13): number {
+  y = ensureSpace(doc, y, 14);
+  doc.setTextColor(GREEN[0], GREEN[1], GREEN[2]);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(size);
+  doc.text(title, margin, y);
+  doc.setDrawColor(GREEN[0], GREEN[1], GREEN[2]);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y + 2.5, margin + 48, y + 2.5);
+  return y + 8;
+}
+
+function drawFooter(doc: jsPDF): void {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageCount = doc.getNumberOfPages();
+
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    doc.setFillColor(243, 244, 246);
+    doc.rect(0, 278, pageWidth, 19, "F");
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.text(
+      "Generated securely via Uzhavar Vazhi Platform (Tamil Nadu Farmer Financial Readiness Hub).",
+      pageWidth / 2,
+      285,
+      { align: "center" },
+    );
+    doc.text(
+      "This document is an analytical reference. Please verify exact terms with local cooperative or bank managers.",
+      pageWidth / 2,
+      291,
+      { align: "center" },
+    );
+  }
+}
+
+export async function generateFarmerPDF(
+  farmerProfile: FarmerProfile | LegacyFarmerData,
+  legacyResults?: LegacyResultsData,
+): Promise<void> {
+  const profile = profileFromArgs(farmerProfile, legacyResults);
   const doc = new jsPDF("portrait", "mm", "a4");
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let y = 20;
+  let y = 0;
 
-  // ── HOTFIX: Clean the '&' bug from the district name 
-  // If "Tirunelveli" comes in as "&T&i&r&u...", this strips the stray '&'s
-  const cleanDistrict = profile.district.replace(/^&|&$/g, "").replace(/&/g, "");
-
-  // ── Load Tamil Font (Noto Sans Tamil) ───────────────────────────────────
-  try {
-    // Fetching from a reliable open-source font CDN
-    const fontUrl = "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/unhinted/ttf/NotoSansTamil/NotoSansTamil-Regular.ttf";
-    const response = await fetch(fontUrl);
-    const buffer = await response.arrayBuffer();
-    const base64Font = arrayBufferToBase64(buffer);
-
-    // Inject the font into jsPDF
-    doc.addFileToVFS("NotoSansTamil.ttf", base64Font);
-    doc.addFont("NotoSansTamil.ttf", "TamilFont", "normal");
-  } catch (error) {
-    console.warn("Could not load Tamil font, falling back to standard font.", error);
-  }
-
-  // ── Header ──────────────────────────────────────────────────────────────
-  doc.setFillColor(22, 101, 52); // dark green
-  doc.rect(0, 0, pageWidth, 35, "F");
-
+  doc.setFillColor(GREEN[0], GREEN[1], GREEN[2]);
+  doc.rect(0, 0, pageWidth, 40, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
   doc.text("Uzhavar Vazhi", margin, 15);
-
-  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Farmer Financial Profile | Tamil Nadu", margin, 23);
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-IN")}`, margin, 30);
-
-  y = 45;
-
-  // ── Farmer Details Section ───────────────────────────────────────────────
-  doc.setTextColor(22, 101, 52);
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text("Farmer Details", margin, y);
-  y += 6;
-
-  doc.setDrawColor(22, 101, 52);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
-
-  doc.setTextColor(40, 40, 40);
   doc.setFontSize(10);
+  doc.text("Farmer Financial Readiness Profile - Seasonal Evaluation", margin, 25);
+  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, pageWidth - margin, 15, { align: "right" });
+  y = 52;
 
-  const details = [
-    ["District", `${cleanDistrict} (${profile.districtTamilName})`],
-    ["Main Crop", profile.crop],
-    ["Land Size", `${profile.landAcres} acres`],
-    ["Farmer Type", profile.isTenant ? "Tenant Farmer" : "Land Owner"],
-  ];
-
-  details.forEach(([label, value]) => {
-    doc.setFont("helvetica", "bold");
-    doc.text(`${label}:`, margin, y);
-    
-    // Switch to Tamil font specifically for the value printing
-    doc.setFont("TamilFont", "normal");
-    doc.text(value, margin + 35, y);
-    y += 7;
+  y = sectionHeading(doc, "FARMER SUMMARY", margin, y);
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    theme: "grid",
+    body: [
+      ["Farmer Profile", pdfSafeText(profile.farmerName) || "Farmer"],
+      ["District Location", pdfSafeText(profile.district)],
+      ["Main Crop Target", pdfSafeText(profile.crop)],
+      ["Cultivation Area", `${profile.landAcres} Acres`],
+      ["Land Tenure Mode", profile.isTenant ? "Tenant Farmer" : "Land Owner (Direct Cultivation)"],
+      ["Scheme Eligibility", profile.eligibility === "high" ? "Verified Eligible" : pdfSafeText(profile.eligibility) || "Verified Eligible"],
+    ],
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 58 }, 1: { cellWidth: 122 } },
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
+    didParseCell: (data) => {
+      if (data.section === "body" && data.row.index === 5 && data.column.index === 1) {
+        data.cell.styles.textColor = GREEN;
+        data.cell.styles.fontStyle = "bold";
+      }
+    },
   });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
 
-  y += 5;
-
-  // ── Risk Score Section ───────────────────────────────────────────────────
-  doc.setTextColor(22, 101, 52);
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text("Seasonal Risk Assessment", margin, y);
-  y += 6;
-
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
-
-  // Color-coded risk score box
-  const riskColor =
-    profile.riskScore <= 30 ? [34, 197, 94]   // green
-    : profile.riskScore <= 55 ? [234, 179, 8]  // yellow
-    : profile.riskScore <= 75 ? [249, 115, 22] // orange
-    : [239, 68, 68];                            // red
-
+  y = sectionHeading(doc, "SEASONAL RISK ASSESSMENT", margin, y);
+  const riskColor = profile.riskScore <= 35 ? GREEN : profile.riskScore <= 60 ? AMBER : RED;
   doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
-  doc.roundedRect(margin, y, 60, 18, 3, 3, "F");
+  doc.roundedRect(margin, y, 62, 18, 2, 2, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Risk Score: ${profile.riskScore}/100`, margin + 5, y + 8);
-  doc.setFontSize(9);
-  doc.text(profile.riskLevel, margin + 5, y + 14);
-
-  doc.setTextColor(40, 40, 40);
-  doc.setFontSize(9);
+  doc.setFontSize(10);
+  doc.text(`${pdfSafeText(profile.riskLevel) || "Risk"} (${profile.riskScore}/100)`, margin + 5, y + 11);
+  doc.setTextColor(31, 41, 55);
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
   const adviceLines = doc.splitTextToSize(
-    `Advice: ${profile.advice}`,
-    pageWidth - margin - 85
+    pdfSafeText(profile.advice) || "Use insurance and formal credit for safer seasonal planning.",
+    pageWidth - margin * 2 - 72,
   );
   doc.text(adviceLines, margin + 70, y + 7);
-  y += 28;
+  y += Math.max(26, adviceLines.length * 5 + 10);
 
-  // ── Eligible Loan Schemes ────────────────────────────────────────────────
-  doc.setTextColor(22, 101, 52);
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text("Eligible Loan Schemes", margin, y);
-  y += 4;
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [["Scheme Name", "Provider", "Max Amount", "Interest Rate"]],
-    body: profile.loans.map((loan) => [
-      loan.name,
-      loan.provider,
-      `Rs.${loan.maxAmount.toLocaleString("en-IN")}`,
-      loan.interestRate,
-    ]),
-    headStyles: {
-      fillColor: [22, 101, 52],
-      textColor: 255,
-      fontStyle: "bold",
-      fontSize: 9,
-      font: "helvetica" // Ensure headers use english font
-    },
-    bodyStyles: { 
-      fontSize: 9,
-      font: "TamilFont" // Use Tamil font for body incase data has Tamil
-    },
-    alternateRowStyles: { fillColor: [240, 253, 244] },
-  });
-
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
-
-  // ── Documents Needed ─────────────────────────────────────────────────────
+  y = sectionHeading(doc, "ELIGIBLE LOAN SCHEMES", margin, y);
   if (profile.loans.length > 0) {
-    doc.setTextColor(22, 101, 52);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Documents Needed for Loan Application", margin, y);
-    y += 6;
-
-    const allDocs = [...new Set(profile.loans.flatMap((l) => l.documents))];
-
-    doc.setTextColor(40, 40, 40);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["Scheme Name", "Provider", "Max Sanction Amount", "Interest Rate"]],
+      body: profile.loans.map((loan) => [
+        pdfSafeText(loan.name),
+        pdfSafeText(loan.provider),
+        formatINR(loan.maxAmount),
+        pdfSafeText(loan.interestRate),
+      ]),
+      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: LIGHT_GREEN },
+      styles: { font: "helvetica", fontSize: 8.5, cellPadding: 3 },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+  } else {
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setFont("TamilFont", "normal"); // Use Tamil font for docs
-    allDocs.forEach((docItem, i) => {
-      doc.text(`${i + 1}. ${docItem}`, margin + 4, y);
+    doc.text("No eligible loan schemes found for your profile", margin, y);
+    y += 10;
+  }
+
+  const documents = [...new Set(profile.loans.flatMap((loan) => loan.documents))];
+  if (documents.length > 0) {
+    y = sectionHeading(doc, "REQUIRED LOAN APPLICATION DOCUMENTS CHECKLIST", margin, y, 11);
+    doc.setTextColor(31, 41, 55);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    documents.forEach((document) => {
+      y = ensureSpace(doc, y, 7);
+      doc.text(`- ${pdfSafeText(document)}`, margin + 2, y);
       y += 6;
     });
-    y += 4;
+    y += 5;
   }
 
-  // ── Eligible Insurance Schemes ───────────────────────────────────────────
-  doc.setTextColor(22, 101, 52);
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text("Eligible Insurance Schemes", margin, y);
-  y += 4;
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: margin, right: margin },
-    head: [["Scheme Name", "Coverage", "Premium Rate"]],
-    body: profile.insurance.map((ins) => [
-      ins.name,
-      ins.coverage,
-      ins.premiumRate,
-    ]),
-    headStyles: {
-      fillColor: [22, 101, 52],
-      textColor: 255,
-      fontStyle: "bold",
-      fontSize: 9,
-      font: "helvetica"
-    },
-    bodyStyles: { 
-      fontSize: 9,
-      font: "TamilFont" 
-    },
-    alternateRowStyles: { fillColor: [240, 253, 244] },
-  });
-
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
-
-  // ── MSP Price Section ────────────────────────────────────────────────────
-  if (profile.mspData) {
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setTextColor(22, 101, 52);
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
-    doc.text("MSP Price Information (2026-27)", margin, y);
-    y += 6;
-
-    doc.setDrawColor(22, 101, 52);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
-
-    doc.setFillColor(240, 253, 244);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 40, 3, 3, "F");
-    doc.setDrawColor(34, 197, 94);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 40, 3, 3, "S");
-
-    doc.setTextColor(22, 101, 52);
-    doc.setFontSize(11);
-    doc.setFont("TamilFont", "bold");
-    doc.text(
-      `${profile.mspData.crop || profile.crop} MSP: Rs. ${profile.mspData.mspPerKg}/kg  (Rs. ${profile.mspData.mspPerQuintal}/quintal)`,
-      margin + 8,
-      y + 12
-    );
-
-    doc.setTextColor(40, 40, 40);
+  y = sectionHeading(doc, "ELIGIBLE INSURANCE SCHEMES", margin, y);
+  if (profile.insurance.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["Scheme Name", "Coverage Scope", "Premium Rate"]],
+      body: profile.insurance.map((insurance) => [
+        pdfSafeText(insurance.name),
+        pdfSafeText(insurance.coverage),
+        pdfSafeText(insurance.premiumRate),
+      ]),
+      headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: LIGHT_GREEN },
+      styles: { font: "helvetica", fontSize: 8.5, cellPadding: 3 },
+    });
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+  } else {
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-
-    doc.text(
-      `Estimated revenue at MSP price:  Rs. ${profile.mspData.revenueAtMSP.toLocaleString("en-IN")}`,
-      margin + 8,
-      y + 24
-    );
-    doc.setTextColor(185, 28, 28);
-    doc.setFont("helvetica", "bold");
-    doc.text(
-      `Amount lost to middlemen:  Rs. ${profile.mspData.lostToMiddlemen.toLocaleString("en-IN")} (claim MSP to recover this)`,
-      margin + 8,
-      y + 34
-    );
-
-    y += 50;
-
-    doc.setTextColor(120, 53, 15);
-    doc.setFillColor(255, 247, 237);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 16, 3, 3, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      "To claim MSP: Contact your nearest PACS cooperative or Agriculture Officer with this document.",
-      margin + 5,
-      y + 10
-    );
+    doc.text("No eligible insurance schemes found", margin, y);
+    y += 10;
   }
-  
-  // ── Footer ───────────────────────────────────────────────────────────────
-  doc.setFillColor(243, 244, 246);
-  doc.rect(0, 282, pageWidth, 15, "F");
-  doc.setTextColor(107, 114, 128);
-  doc.setFontSize(8);
-  
-  // Switch back to Tamil font to print the Tamil portion of the footer
-  doc.setFont("TamilFont", "normal");
-  doc.text(
-    "Generated by Uzhavar Vazhi | உழவர் வழி — Tamil Nadu Farmer Financial Readiness Platform",
-    pageWidth / 2,
-    289,
-    { align: "center" }
-  );
-  
+
+  const cropMsp = profile.cropMsp ?? 0;
+  if (cropMsp > 0) {
+    const estimatedRevenue = profile.estimatedRevenue ?? cropMsp * profile.landAcres * 10;
+    const projectedLoss = profile.projectedLoss ?? estimatedRevenue * 0.18;
+
+    y = sectionHeading(doc, "MSP PRICE ANALYTICS (2026-27 SEASON)", margin, y);
+    y = ensureSpace(doc, y, 42);
+    doc.setTextColor(31, 41, 55);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`${pdfSafeText(profile.crop)} MSP Protection Matrix`, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Official Government Minimum Support Price: ${formatINR(cropMsp)} / quintal`, margin, y + 8);
+    doc.text(`Your Estimated Yield Revenue potential at full MSP value: ${formatINR(estimatedRevenue)}`, margin, y + 16);
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(margin, y + 22, pageWidth - margin * 2, 16, 2, 2, "F");
+    doc.setTextColor(146, 64, 14);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.3);
+    doc.text(
+      doc.splitTextToSize(
+        `Projected Loss to Middlemen if sold at local market rates: ${formatINR(projectedLoss)} (Claim official MSP channels to protect this value)`,
+        pageWidth - margin * 2 - 8,
+      ),
+      margin + 4,
+      y + 29,
+    );
+    y += 48;
+  }
+
+  y = ensureSpace(doc, y, 34);
+  doc.setFillColor(255, 251, 235);
+  doc.roundedRect(margin, y, pageWidth - margin * 2, 27, 2, 2, "F");
+  doc.setTextColor(120, 53, 15);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("Actionable Guidance Note:", margin + 4, y + 8);
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.4);
   doc.text(
-    "This document is for reference only. Please verify scheme eligibility with your local bank or cooperative.",
-    pageWidth / 2,
-    294,
-    { align: "center" }
+    doc.splitTextToSize(
+      "To claim official MSP valuation and reduce local intermediary fees, submit a printout of this Financial Readiness Profile to your nearest PACS center or regional Agriculture Officer.",
+      pageWidth - margin * 2 - 8,
+    ),
+    margin + 4,
+    y + 15,
   );
 
-  // ── Download ─────────────────────────────────────────────────────────────
-  const fileName = `uzhavar-vazhi-${cleanDistrict.toLowerCase()}-${profile.crop.toLowerCase()}.pdf`;
-  doc.save(fileName);
+  drawFooter(doc);
+
+  const fileName = `uzhavar-vazhi-${profile.farmerName || profile.district}-${profile.crop}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  doc.save(`${fileName || "farmer-profile"}.pdf`);
 }

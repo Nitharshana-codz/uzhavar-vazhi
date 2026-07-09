@@ -13,6 +13,7 @@ interface FarmerFormProps {
 }
 
 export interface FarmerData {
+  farmerName?: string;
   district: string;
   districtTa: string;
   crop: string;
@@ -24,6 +25,7 @@ export interface FarmerData {
   eligibility?: {
     loans: {
       name: string;
+      tamilName?: string;
       provider: string;
       maxAmount: number | null;
       interestRate: string;
@@ -31,6 +33,7 @@ export interface FarmerData {
     }[];
     insurance: {
       name: string;
+      tamilName?: string;
       coverage: string;
       premiumRate: string;
     }[];
@@ -44,6 +47,7 @@ export interface FarmerData {
 
 export function FarmerForm({ onSubmit }: FarmerFormProps) {
   const { t, lang } = useI18n();
+  const [farmerName, setFarmerName] = useState('');
   const [district, setDistrict] = useState('');
   const [districtTa, setDistrictTa] = useState('');
   const [crop, setCrop] = useState('');
@@ -89,7 +93,11 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
       const eligibility = await eligibilityRes.json();
       const riskData = await riskRes.json();
 
+      console.log('Eligibility API response:', eligibility);
+      console.log('Risk API response:', riskData);
+
       onSubmit({
+        farmerName,
         district,
         districtTa,
         crop,
@@ -104,6 +112,7 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
     } catch (error) {
       console.error('API error:', error);
       onSubmit({
+        farmerName,
         district,
         districtTa,
         crop,
@@ -128,6 +137,21 @@ export function FarmerForm({ onSubmit }: FarmerFormProps) {
     >
       <div className="bg-white rounded-xl border border-straw p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Farmer Name */}
+          <div>
+            <label className="block mb-1">
+              <span className="text-soil font-medium">Your name</span>
+              <span className="block font-tamil text-paddy text-sm">உங்கள் பெயர்</span>
+            </label>
+            <input
+              type="text"
+              value={farmerName}
+              onChange={(e) => setFarmerName(e.target.value)}
+              placeholder="Enter your name"
+              className="flex h-12 w-full rounded-lg border border-straw bg-white px-4 py-2 text-soil text-sm focus:outline-none focus:ring-2 focus:ring-turmeric/30 hover:border-turmeric transition-colors"
+            />
+          </div>
+
           {/* District */}
           <div>
             <label className="block mb-1">

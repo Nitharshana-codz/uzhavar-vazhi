@@ -6,6 +6,7 @@ import { CloudRain, Loader2, MapPin, Sprout, Sun } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import districts from '@/data/districts.json';
+import { districtCoords } from '@/lib/district-coords';
 
 type CropRecommendation = {
   crop: string;
@@ -29,21 +30,33 @@ type WeatherData = {
   avoid: CropRecommendation[];
 };
 
-type WeatherApiResponse = {
-  weather: {
-    temperatureC: number;
-    rainfallMM: number;
-    humidityPercent: number;
-    windSpeedKmh: number;
-    summary: string;
-  };
-  forecast: { date: string; maxTempC: number; minTempC: number; rainfallMM: number }[];
-  farmingAdvisory: { en: string; ta: string };
-  recommendations: {
-    recommended: CropRecommendation[];
-    avoid: CropRecommendation[];
+type OpenMeteoResponse = {
+  daily?: {
+    time?: string[];
+    temperature_2m_max?: number[];
+    temperature_2m_min?: number[];
+    precipitation_sum?: number[];
   };
 };
+
+const fallbackRecommendations: CropRecommendation[] = [
+  {
+    crop: 'Paddy',
+    tamilName: 'Paddy',
+    status: 'recommended',
+    bestSeason: 'Kharif',
+    reason: 'Monitor the 7-day rainfall outlook before sowing and keep drainage ready.',
+    suitabilityScore: 78,
+  },
+  {
+    crop: 'Ragi',
+    tamilName: 'Ragi',
+    status: 'recommended',
+    bestSeason: 'Kharif / Rabi',
+    reason: 'Useful as a resilient option when rainfall is uncertain.',
+    suitabilityScore: 72,
+  },
+];
 
 export default function WeatherPage() {
   const [districtId, setDistrictId] = useState('coimbatore');
@@ -64,28 +77,50 @@ export default function WeatherPage() {
     setError('');
 
     try {
-      const response = await fetch(`/api/weather?district=${encodeURIComponent(district.en)}`);
+      const coords = districtCoords[district.id];
+      if (!coords) throw new Error('Missing district coordinates');
+
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia/Kolkata&forecast_days=7`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Weather failed');
 
-      const data = (await response.json()) as WeatherApiResponse;
-      const daily = data.forecast ?? [];
+      const data = (await response.json()) as OpenMeteoResponse;
+      const daily = data.daily?.time?.map((date, index) => ({
+        date,
+        maxTempC: data.daily?.temperature_2m_max?.[index] ?? 0,
+        minTempC: data.daily?.temperature_2m_min?.[index] ?? 0,
+        rainfallMM: data.daily?.precipitation_sum?.[index] ?? 0,
+      })) ?? [];
+      const weeklyRainfall = daily.reduce((sum, day) => sum + day.rainfallMM, 0);
+      const todayMax = daily[0]?.maxTempC ?? 0;
+      const todayMin = daily[0]?.minTempC ?? 0;
+      const summary = weeklyRainfall > 30 ? 'rainy week expected' : weeklyRainfall > 5 ? 'light rainfall expected' : 'mostly dry forecast';
 
       setWeather({
-        maxTemp: daily[0]?.maxTempC ?? data.weather.temperatureC,
-        minTemp: daily[0]?.minTempC ?? data.weather.temperatureC,
-        rainfall: daily.reduce((sum, day) => sum + day.rainfallMM, 0),
-        humidity: data.weather.humidityPercent,
-        windSpeed: data.weather.windSpeedKmh,
-        summary: data.weather.summary,
-        advisory: data.farmingAdvisory.en,
+        maxTemp: todayMax,
+        minTemp: todayMin,
+        rainfall: weeklyRainfall,
+        humidity: 0,
+        windSpeed: 0,
+        summary,
+        advisory: weeklyRainfall > 30
+          ? 'Heavy rainfall is possible this week. Delay fresh sowing and clear drainage channels.'
+          : 'Use the 7-day forecast to time irrigation, fertilizer, and field preparation.',
         daily: daily.map((day) => ({
           name: new Date(day.date).toLocaleDateString('en', { weekday: 'short' }),
           max: day.maxTempC,
           min: day.minTempC,
           precipitation: day.rainfallMM,
         })),
-        recommended: data.recommendations.recommended,
-        avoid: data.recommendations.avoid,
+        recommended: fallbackRecommendations,
+        avoid: weeklyRainfall > 30 ? [{
+          crop: 'Cotton',
+          tamilName: 'Cotton',
+          status: 'avoid',
+          bestSeason: 'Kharif',
+          reason: 'Avoid during heavy rainfall windows because excess moisture can damage bolls.',
+          suitabilityScore: 35,
+        }] : [],
       });
     } catch {
       setError('Could not fetch weather. Please try again.');

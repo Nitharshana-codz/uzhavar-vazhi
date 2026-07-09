@@ -1,13 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Check, AlertTriangle } from 'lucide-react';
 import type { FarmerData } from '../../../app/page';
 import districts from '@/data/districts.json';
 import crops from '@/data/crops.json';
-import schemes from '@/data/schemes.json';
-import riskMatrix from '@/data/riskMatrix.json';
+import { loadFarmerSession, type FarmerSessionData } from '@/lib/farmer-session';
 
 interface Step2ResultsProps {
   farmerData: FarmerData;
@@ -15,62 +15,29 @@ interface Step2ResultsProps {
   onBack: () => void;
 }
 
-type SchemeStatus = 'eligible' | 'check' | 'notEligible';
-
-function evaluateScheme(
-  scheme: (typeof schemes)[number],
-  farmerData: FarmerData
-): SchemeStatus {
-  const cropEligible =
-    scheme.eligibleCrops?.includes(farmerData.crop) ||
-    scheme.eligibleCrops?.includes('All');
-  const ownershipEligible = scheme.ownership?.includes(farmerData.ownership);
-  const landSizeOk =
-    farmerData.landSize >= (scheme.minLandSize || 0) &&
-    (!('maxLandSize' in scheme) || !scheme.maxLandSize || farmerData.landSize <= scheme.maxLandSize);
-  const districtEligible = !scheme.districts || scheme.districts.includes(farmerData.district);
-
-  if (cropEligible && ownershipEligible && landSizeOk && districtEligible) {
-    return 'eligible';
-  }
-  if (cropEligible || ownershipEligible) {
-    return 'check';
-  }
-  return 'notEligible';
-}
-
 export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) {
   const { t, i18n } = useTranslation();
   const isTamil = i18n.language === 'ta';
+  const [sessionData, setSessionData] = useState<FarmerSessionData | null>(null);
+
+  useEffect(() => {
+    setSessionData(loadFarmerSession());
+  }, []);
 
   const district = districts.find((d) => d.id === farmerData.district);
   const crop = crops.find((c) => c.id === farmerData.crop);
-  const riskData = riskMatrix.find((r) => r.cropId === farmerData.crop);
-  const riskLevel = riskData?.riskLevel ?? 50;
+  const loans = sessionData?.eligibility?.loans ?? [];
+  const insurance = sessionData?.eligibility?.insurance ?? [];
+  const riskScore = sessionData?.riskData?.riskScore ?? 0;
+  const riskLevel = sessionData?.riskData?.riskLevel ?? 'Medium';
+  const advice = sessionData?.riskData?.advice ?? '';
+  const cropMsp = sessionData?.cropMsp ?? crop?.msp ?? null;
 
-  const eligibleLoanSchemes = schemes
-    .filter((s) => s.type === 'loan')
-    .map((s) => ({ ...s, status: evaluateScheme(s, farmerData) }));
+  const maxLoanAmount = loans.length
+    ? Math.max(...loans.map((loan) => loan.maxAmount ?? 0))
+    : farmerData.landSize * 30000;
 
-  const eligibleInsuranceSchemes = schemes
-    .filter((s) => s.type === 'insurance')
-    .map((s) => ({ ...s, status: evaluateScheme(s, farmerData) }));
-
-  let maxLoanAmount = 0;
-  const hasKcc = eligibleLoanSchemes.find((s) => s.id === 'kcc' && s.status === 'eligible');
-  const hasCoop = eligibleLoanSchemes.find((s) => s.id === 'cooperative' && s.status === 'eligible');
-  const hasNabard = eligibleLoanSchemes.find((s) => s.id === 'nabard' && s.status === 'eligible');
-
-  if (hasKcc) maxLoanAmount = Math.max(maxLoanAmount, Math.min(300000, farmerData.landSize * 60000));
-  if (hasCoop) maxLoanAmount = Math.max(maxLoanAmount, Math.min(150000, farmerData.landSize * 50000));
-  if (hasNabard) maxLoanAmount = Math.max(maxLoanAmount, Math.min(500000, farmerData.landSize * 80000));
-  if (maxLoanAmount === 0) {
-    maxLoanAmount = farmerData.landSize * 30000;
-  }
-
-  const eligibleCount =
-    eligibleLoanSchemes.filter((s) => s.status === 'eligible').length +
-    eligibleInsuranceSchemes.filter((s) => s.status === 'eligible').length;
+  const eligibleCount = loans.length + insurance.length;
   const eligibilityLevel =
     eligibleCount >= 3 ? 'high' : eligibleCount >= 1 ? 'medium' : 'low';
 
@@ -147,26 +114,22 @@ export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) 
             <h3 className="text-sm font-medium text-soil mb-0.5">{t('results.loans.title')}</h3>
             <p className="text-xs text-soil/60 font-tamil mb-3">{t('results.loans.titleTa')}</p>
             <div className="flex flex-wrap gap-2 mb-4">
-              {eligibleLoanSchemes.map((s) => {
-                if (s.status === 'notEligible') return null;
-                return (
+              {loans.length > 0 ? (
+                loans.map((loan) => (
                   <span
-                    key={s.id}
-                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                      s.status === 'eligible'
-                        ? 'bg-paddy-light text-paddy'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
+                    key={loan.name}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-paddy-light text-paddy"
                   >
-                    {s.status === 'eligible' ? (
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    ) : (
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                    )}
-                    <span>{isTamil ? s.ta : s.en}</span>
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>{isTamil && loan.tamilName ? loan.tamilName : loan.name}</span>
                   </span>
-                );
-              })}
+                ))
+              ) : (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>{isTamil ? 'தகுதியான கடன் திட்டம் இல்லை' : 'No eligible loan schemes'}</span>
+                </span>
+              )}
             </div>
           </div>
           <p className="text-soil/60 text-sm border-t border-straw/30 pt-3">
@@ -184,30 +147,26 @@ export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) 
           <h3 className="text-sm font-medium text-soil mb-0.5">{t('results.insurance.title')}</h3>
           <p className="text-xs text-soil/60 font-tamil mb-3">{t('results.insurance.titleTa')}</p>
           <div className="flex flex-wrap gap-2 mb-3">
-            {eligibleInsuranceSchemes.map((s) => {
-              if (s.status === 'notEligible') return null;
-              return (
+            {insurance.length > 0 ? (
+              insurance.map((item) => (
                 <span
-                  key={s.id}
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                    s.status === 'eligible'
-                      ? 'bg-paddy-light text-paddy'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
+                  key={item.name}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-paddy-light text-paddy"
                 >
-                  {s.status === 'eligible' ? (
-                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  ) : (
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isTamil ? s.ta : s.en}</span>
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>{isTamil && item.tamilName ? item.tamilName : item.name}</span>
                 </span>
-              );
-            })}
+              ))
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>{isTamil ? 'தகுதியான காப்பீடு இல்லை' : 'No eligible insurance'}</span>
+              </span>
+            )}
           </div>
-          <p className="text-[10px] text-soil/40 italic">
-            * {isTamil ? t('results.insurance.clickToApplyTa') : t('results.insurance.clickToApply')}
-          </p>
+          {insurance[0] && (
+            <p className="text-xs text-soil/60">{insurance[0].premiumRate}</p>
+          )}
         </motion.div>
 
         <motion.div
@@ -221,9 +180,9 @@ export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) 
               <span className="text-base font-bold text-soil">{crop?.en}</span>
               <span className="text-xs text-soil/60 font-tamil">({crop?.ta})</span>
             </div>
-            {crop?.msp ? (
+            {cropMsp ? (
               <p className="text-2xl font-bold text-paddy leading-none">
-                ₹{crop.msp.toLocaleString('en-IN')}
+                ₹{cropMsp.toLocaleString('en-IN')}
                 <span className="text-xs font-normal text-soil/60 ml-1">
                   {isTamil ? t('results.msp.perQuintalTa') : t('results.msp.perQuintal')}
                 </span>
@@ -252,12 +211,12 @@ export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) 
             <div className="relative w-full h-3 bg-straw rounded-full overflow-hidden mb-3">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${riskLevel}%` }}
+                animate={{ width: `${riskScore}%` }}
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className={`h-full rounded-full ${
-                  riskLevel <= 33
+                  riskScore <= 33
                     ? 'bg-paddy'
-                    : riskLevel <= 66
+                    : riskScore <= 66
                       ? 'bg-amber-500'
                       : 'bg-terracotta'
                 }`}
@@ -276,10 +235,9 @@ export function Step2Results({ farmerData, onNext, onBack }: Step2ResultsProps) 
           </div>
           <div className="border-t border-straw/30 pt-3">
             <p className="text-xs font-semibold text-soil">
-              {riskLevel <= 33 ? t('results.risk.low') : riskLevel <= 66 ? t('results.risk.medium') : t('results.risk.high')} —{' '}
-              <span className="text-soil/70 font-normal">{t('results.risk.impact')}</span>
+              {riskLevel} — {riskScore}/100
             </p>
-            <p className="text-[10px] text-soil/50 font-tamil mt-0.5">{t('results.risk.impactTa')}</p>
+            <p className="text-xs text-soil/70 mt-1">{advice}</p>
           </div>
         </motion.div>
       </motion.div>

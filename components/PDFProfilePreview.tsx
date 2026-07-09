@@ -24,24 +24,42 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
     ? Math.max(...farmerData.eligibility.loans.map((l) => l.maxAmount || 0))
     : farmerData.landSize >= 2 ? 180000 : Math.floor(farmerData.landSize * 90000);
 
-  const handleDownloadPDF = () => {
-    generateFarmerPDF({
+  const handleDownloadPDF = async () => {
+    const loans = farmerData.eligibility?.loans || [];
+    const insurance = farmerData.eligibility?.insurance || [];
+    const riskScore = farmerData.riskData?.riskScore || 0;
+    const riskLevel = farmerData.riskData?.riskLevel || 'Low';
+    const advice = farmerData.riskData?.advice || '';
+
+    console.log('Generating PDF with data:', {
+      loans,
+      insurance,
+      riskScore,
+      riskLevel,
+      advice,
+    });
+
+    await generateFarmerPDF({
+      farmerName: farmerData.farmerName || '',
       district: farmerData.district,
       districtTamilName: farmerData.districtTa,
       crop: farmerData.crop,
+      cropTamilName: farmerData.cropTa,
       landAcres: farmerData.landSize,
       isTenant: farmerData.ownership === 'tenant',
-      loans: farmerData.eligibility?.loans || [],
-      insurance: farmerData.eligibility?.insurance || [],
-      riskScore: farmerData.riskData?.riskScore || 0,
-      riskLevel: farmerData.riskData?.riskLevel || 'Low',
-      advice: farmerData.riskData?.advice || '',
+      eligibility: loans.length > 0 ? 'high' : 'medium',
+      loans,
+      insurance,
+      riskScore,
+      riskLevel,
+      advice,
+      cropMsp: farmerData.cropMsp || 0,
     });
   };
 
   const handleWhatsAppShare = () => {
     const text = encodeURIComponent(
-      `Uzhavar Vazhi Farmer Profile\n\nDistrict: ${farmerData.district}\nCrop: ${farmerData.crop}\nLand: ${farmerData.landSize} acres\nEligible loan: ₹${maxLoanAmount.toLocaleString()}\n\nGenerated with uzhavarvazhi.in`
+      `Uzhavar Vazhi Farmer Profile\n\nDistrict: ${farmerData.district}\nCrop: ${farmerData.crop}\nLand: ${farmerData.landSize} acres\nEligible loan: Rs. ${maxLoanAmount.toLocaleString()}\n\nGenerated with uzhavarvazhi.in`
     );
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
@@ -60,29 +78,26 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
       transition={{ duration: 0.5 }}
       className="w-full max-w-[480px] mx-auto px-4 pb-16"
     >
-      {/* PDF Preview Card */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
         className="bg-white shadow-md rounded-lg"
       >
-        {/* Header */}
         <div className="bg-paddy p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wheat className="w-5 h-5 text-turmeric" />
             <div>
               <p className="text-white font-semibold text-sm">Uzhavar Vazhi</p>
-              <p className="font-tamil text-turmeric text-xs">உழவர் வழி</p>
+              <p className="font-tamil text-turmeric text-xs">Uzhavar Vazhi</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="font-tamil text-white text-sm">விவசாயி நிதி சுயவிவர அறிக்கை</p>
+            <p className="font-tamil text-white text-sm">Farmer Financial Profile</p>
             <p className="text-paddy-light text-xs">{today}</p>
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-5">
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
             <div>
@@ -117,34 +132,48 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
           <div className="my-4 border-t border-straw" />
 
           <div className="space-y-2.5 text-sm">
-            {farmerData.eligibility?.loans?.map((loan) => (
-              <div key={loan.name} className="flex items-center justify-between">
-                <span className="text-soil">{loan.name}</span>
-                <span className="text-paddy font-medium flex items-center gap-1">
+            {(farmerData.eligibility?.loans || []).map((loan) => (
+              <div key={loan.name} className="flex items-center justify-between py-2 border-b border-straw">
+                <div>
+                  <span className="text-soil text-sm">{loan.name}</span>
+                  {loan.tamilName && (
+                    <span className="font-tamil text-paddy text-xs ml-2">{loan.tamilName}</span>
+                  )}
+                </div>
+                <span className="text-paddy font-medium text-sm flex items-center gap-1">
                   <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
-                  ₹{(loan.maxAmount || 0).toLocaleString()}
+                  Rs. {(loan.maxAmount || 0).toLocaleString()}
                 </span>
               </div>
             ))}
 
-            {farmerData.eligibility?.insurance?.map((ins) => (
-              <div key={ins.name} className="flex items-center justify-between">
-                <span className="text-soil">{ins.name}</span>
-                <span className="text-paddy font-medium flex items-center gap-1">
+            {(farmerData.eligibility?.insurance || []).map((ins) => (
+              <div key={ins.name} className="flex items-center justify-between py-2 border-b border-straw">
+                <div>
+                  <span className="text-soil text-sm">{ins.name}</span>
+                  {ins.tamilName && (
+                    <span className="font-tamil text-paddy text-xs ml-2">{ins.tamilName}</span>
+                  )}
+                </div>
+                <span className="text-paddy font-medium text-sm flex items-center gap-1">
                   <span className="w-4 h-4 rounded-full bg-paddy text-white text-xs flex items-center justify-center">✓</span>
-                  Matched
+                  Eligible
                 </span>
               </div>
             ))}
 
-            <div className="flex items-center justify-between">
-              <span className="text-soil">Seasonal Risk</span>
-              <span className="font-medium text-soil">{farmerData.riskData?.riskLevel || 'Medium'}</span>
+            <div className="flex items-center justify-between py-2 border-b border-straw">
+              <span className="text-soil text-sm">Seasonal Risk</span>
+              <span className="font-medium text-sm text-soil">
+                {farmerData.riskData?.riskLevel || 'Medium'} ({farmerData.riskData?.riskScore || 0}/100)
+              </span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-soil">MSP Reference</span>
-              <span className="font-medium text-soil">₹{(farmerData.cropMsp || 2183).toLocaleString()}/quintal</span>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-soil text-sm">MSP Reference</span>
+              <span className="font-medium text-sm text-soil">
+                Rs. {(farmerData.cropMsp || 0).toLocaleString()}/quintal
+              </span>
             </div>
 
             <div className="flex items-start justify-between">
@@ -156,15 +185,13 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
           </div>
         </div>
 
-        {/* Footer */}
         <div className="bg-straw/50 p-3 text-center">
           <p className="text-xs text-soil/60">
-            {t.pdf.generated} Uzhavar Vazhi · உழவர் வழி · uzhavarvazhi.in
+            {t.pdf.generated} Uzhavar Vazhi · Uzhavar Vazhi · uzhavarvazhi.in
           </p>
         </div>
       </motion.div>
 
-      {/* Action buttons */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -179,7 +206,7 @@ export function PDFProfilePreview({ farmerData, onBack, onNewFarmer }: PDFProfil
         >
           <Download className="w-5 h-5" />
           <span>{t.pdf.download}</span>
-          <span className="font-tamil text-sm opacity-90">PDF பதிவிறக்கம்</span>
+          <span className="font-tamil text-sm opacity-90">PDF download</span>
         </motion.button>
 
         <motion.button
