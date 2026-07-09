@@ -6,7 +6,6 @@ import { CloudRain, Loader2, MapPin, Sprout, Sun } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import districts from '@/data/districts.json';
-import { districtCoords } from '@/lib/district-coords';
 
 type CropRecommendation = {
   crop: string;
@@ -30,34 +29,6 @@ type WeatherData = {
   avoid: CropRecommendation[];
 };
 
-type OpenMeteoResponse = {
-  daily?: {
-    time?: string[];
-    temperature_2m_max?: number[];
-    temperature_2m_min?: number[];
-    precipitation_sum?: number[];
-  };
-};
-
-const fallbackRecommendations: CropRecommendation[] = [
-  {
-    crop: 'Paddy',
-    tamilName: 'Paddy',
-    status: 'recommended',
-    bestSeason: 'Kharif',
-    reason: 'Monitor the 7-day rainfall outlook before sowing and keep drainage ready.',
-    suitabilityScore: 78,
-  },
-  {
-    crop: 'Ragi',
-    tamilName: 'Ragi',
-    status: 'recommended',
-    bestSeason: 'Kharif / Rabi',
-    reason: 'Useful as a resilient option when rainfall is uncertain.',
-    suitabilityScore: 72,
-  },
-];
-
 export default function WeatherPage() {
   const [districtId, setDistrictId] = useState('coimbatore');
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -70,64 +41,63 @@ export default function WeatherPage() {
   );
 
   async function fetchWeather(id = districtId) {
-    const district = districts.find((item) => item.id === id);
-    if (!district) return;
+  const district = districts.find((item) => item.id === id);
+  if (!district) return;
 
-    setIsLoading(true);
-    setError('');
+  setIsLoading(true);
+  setError("");
 
-    try {
-      const coords = districtCoords[district.id];
-      if (!coords) throw new Error('Missing district coordinates');
+  try {
+    // Call YOUR backend instead of Open-Meteo
+    const response = await fetch(`/api/weather?district=${district.en}`);
 
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia/Kolkata&forecast_days=7`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Weather failed');
-
-      const data = (await response.json()) as OpenMeteoResponse;
-      const daily = data.daily?.time?.map((date, index) => ({
-        date,
-        maxTempC: data.daily?.temperature_2m_max?.[index] ?? 0,
-        minTempC: data.daily?.temperature_2m_min?.[index] ?? 0,
-        rainfallMM: data.daily?.precipitation_sum?.[index] ?? 0,
-      })) ?? [];
-      const weeklyRainfall = daily.reduce((sum, day) => sum + day.rainfallMM, 0);
-      const todayMax = daily[0]?.maxTempC ?? 0;
-      const todayMin = daily[0]?.minTempC ?? 0;
-      const summary = weeklyRainfall > 30 ? 'rainy week expected' : weeklyRainfall > 5 ? 'light rainfall expected' : 'mostly dry forecast';
-
-      setWeather({
-        maxTemp: todayMax,
-        minTemp: todayMin,
-        rainfall: weeklyRainfall,
-        humidity: 0,
-        windSpeed: 0,
-        summary,
-        advisory: weeklyRainfall > 30
-          ? 'Heavy rainfall is possible this week. Delay fresh sowing and clear drainage channels.'
-          : 'Use the 7-day forecast to time irrigation, fertilizer, and field preparation.',
-        daily: daily.map((day) => ({
-          name: new Date(day.date).toLocaleDateString('en', { weekday: 'short' }),
-          max: day.maxTempC,
-          min: day.minTempC,
-          precipitation: day.rainfallMM,
-        })),
-        recommended: fallbackRecommendations,
-        avoid: weeklyRainfall > 30 ? [{
-          crop: 'Cotton',
-          tamilName: 'Cotton',
-          status: 'avoid',
-          bestSeason: 'Kharif',
-          reason: 'Avoid during heavy rainfall windows because excess moisture can damage bolls.',
-          suitabilityScore: 35,
-        }] : [],
-      });
-    } catch {
-      setError('Could not fetch weather. Please try again.');
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      throw new Error("Weather failed");
     }
+
+    const data = await response.json();
+    console.log(data.recommendations);
+
+    const weeklyRainfall = Number(
+  data.forecast.reduce(
+    (total: number, day: any) => total + day.rainfallMM,
+    0
+  ).toFixed(1)
+);
+
+console.log("Weekly Rainfall:", weeklyRainfall);
+
+
+    setWeather({
+      maxTemp: data.weather.temperatureC,
+      minTemp: data.forecast[0]?.minTempC ?? 0,
+      rainfall: weeklyRainfall,
+      humidity: data.weather.humidityPercent,
+      windSpeed: data.weather.windSpeedKmh,
+      summary: data.weather.summary,
+
+      advisory: data.farmingAdvisory.en,
+
+      daily: data.forecast.map((day: any) => ({
+        name: new Date(day.date).toLocaleDateString("en", {
+          weekday: "short",
+        }),
+        max: day.maxTempC,
+        min: day.minTempC,
+        precipitation: day.rainfallMM,
+      })),
+
+      recommended: data.recommendations.recommended,
+
+      avoid: data.recommendations.avoid,
+    });
+  } catch (err) {
+    console.error(err);
+    setError("Could not fetch weather. Please try again.");
+  } finally {
+    setIsLoading(false);
   }
+}7
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
@@ -184,7 +154,7 @@ export default function WeatherPage() {
                 <div className="mt-6 grid grid-cols-3 gap-2">
                   <div className="rounded-lg bg-white/10 p-3">
                     <p className="text-xs text-white/80">Weekly Rainfall</p>
-                    <p className="text-xl font-semibold">{weather.rainfall.toFixed(1)} mm</p>
+                    <p className="text-xl font-semibold">{weather.rainfall} mm</p>
                   </div>
                   <div className="rounded-lg bg-white/10 p-3">
                     <p className="text-xs text-white/80">Humidity</p>
@@ -240,13 +210,49 @@ export default function WeatherPage() {
                   ))}
                 </div>
                 {weather.avoid.length > 0 && (
-                  <div className="mt-5 rounded-lg border border-terracotta/20 bg-terracotta/5 p-4">
-                    <p className="font-semibold text-soil">Avoid for current weather</p>
-                    <p className="mt-1 text-sm text-soil/60">
-                      {weather.avoid.slice(0, 4).map((crop) => crop.crop).join(', ')}
-                    </p>
-                  </div>
-                )}
+                  <div className="mt-8">
+                    <h3 className="text-xl font-semibold text-red-600">
+                      Crops to Avoid
+                    </h3>
+                  <p className="text-sm text-soil/60 mb-4">
+        These crops are not suitable for the current weather.
+    </p>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {weather.avoid.slice(0, 4).map((crop) => (
+        <div
+          key={crop.crop}
+          className="rounded-lg border border-red-200 bg-red-50 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-soil">{crop.crop}</p>
+              <p className="font-tamil text-sm text-soil/60">
+                {crop.tamilName}
+              </p>
+            </div>
+
+            <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-600">
+              {crop.suitabilityScore}%
+            </span>
+          </div>
+
+          <p className="mt-3 text-xs text-soil/60">
+            {crop.bestSeason}
+          </p>
+
+          <p className="mt-2 text-sm text-soil/70">
+            {crop.reason}
+          </p>
+
+          <span className="inline-flex mt-3 px-3 py-1 rounded-full text-xs bg-red-100 text-red-600">
+            Avoid
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
               </>
             )}
           </section>
