@@ -155,8 +155,8 @@ function sectionHeading(doc: jsPDF, title: string, margin: number, y: number, si
   doc.setFontSize(size);
   doc.text(title, margin, y);
   doc.setDrawColor(GREEN[0], GREEN[1], GREEN[2]);
-  doc.setLineWidth(0.6);
-  doc.line(margin, y + 2.5, margin + 48, y + 2.5);
+  doc.setLineWidth(0.35);
+  doc.line(margin, y + 2.5, doc.internal.pageSize.getWidth() - margin, y + 2.5);
   return y + 8;
 }
 
@@ -166,23 +166,10 @@ function drawFooter(doc: jsPDF): void {
 
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
-    doc.setFillColor(243, 244, 246);
-    doc.rect(0, 278, pageWidth, 19, "F");
     doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.text(
-      "Generated securely via Uzhavar Vazhi Platform (Tamil Nadu Farmer Financial Readiness Hub).",
-      pageWidth / 2,
-      285,
-      { align: "center" },
-    );
-    doc.text(
-      "This document is an analytical reference. Please verify exact terms with local cooperative or bank managers.",
-      pageWidth / 2,
-      291,
-      { align: "center" },
-    );
+    doc.setFontSize(7);
+    doc.text(`Page ${page} of ${pageCount}`, pageWidth / 2, 292, { align: "center" });
   }
 }
 
@@ -195,19 +182,23 @@ export async function generateFarmerPDF(
   const hasTamilFont = await addTamilFont(doc);
   const contentFont = hasTamilFont ? "NotoSansTamil" : "helvetica";
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
+  const margin = 12;
   let y = 0;
 
   doc.setFillColor(GREEN[0], GREEN[1], GREEN[2]);
-  doc.rect(0, 0, pageWidth, 40, "F");
+  doc.roundedRect(margin, 15, pageWidth - margin * 2, 36, 1, 1, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFont(contentFont, "normal");
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text("Uzhavar Vazhi | உழவர் வழி", margin, 15);
+  const brand = "Uzhavar Vazhi | ";
+  doc.text(brand, margin + 5, 27);
+  const brandWidth = doc.getTextWidth(brand);
+  doc.setFont(contentFont, "normal");
+  doc.text("உழவர் வழி", margin + 5 + brandWidth, 27);
   doc.setFontSize(10);
-  doc.text("Farmer Financial Readiness Profile — Seasonal Evaluation", margin, 25);
-  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, pageWidth - margin, 15, { align: "right" });
-  y = 52;
+  doc.text("Farmer Financial Readiness Profile — Seasonal Evaluation", margin + 5, 35);
+  doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, pageWidth - margin - 5, 27, { align: "right" });
+  y = 57;
 
   y = sectionHeading(doc, "FARMER SUMMARY", margin, y);
   autoTable(doc, {
@@ -222,8 +213,9 @@ export async function generateFarmerPDF(
       ["Land Tenure Mode", profile.isTenant ? "Tenant Farmer" : "Land Owner (Direct Cultivation)"],
       ["Scheme Eligibility", profile.eligibility === "high" ? "Verified Eligible" : pdfSafeText(profile.eligibility) || "Verified Eligible"],
     ],
-    columnStyles: { 0: { fontStyle: "bold", cellWidth: 58 }, 1: { cellWidth: 122 } },
-    styles: { font: contentFont, fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 47 }, 1: { cellWidth: 139 } },
+    styles: { font: contentFont, fontSize: 8, cellPadding: 2.25, textColor: [31, 41, 55] },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
     didParseCell: (data) => {
       if (data.section === "body" && data.row.index === 5 && data.column.index === 1) {
         data.cell.styles.textColor = GREEN;
@@ -235,21 +227,27 @@ export async function generateFarmerPDF(
 
   y = sectionHeading(doc, "SEASONAL RISK ASSESSMENT", margin, y);
   const riskColor = profile.riskScore <= 35 ? GREEN : profile.riskScore <= 60 ? AMBER : RED;
+  doc.setFillColor(220, 252, 231);
+  doc.rect(margin, y, pageWidth - margin * 2, 30, "F");
   doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
-  doc.roundedRect(margin, y, 62, 18, 2, 2, "F");
+  doc.rect(margin, y, 2, 30, "F");
+  doc.roundedRect(margin + 6, y + 4, 43, 10, 1, 1, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text(`${pdfSafeText(profile.riskLevel) || "Risk"} (${profile.riskScore}/100)`, margin + 5, y + 11);
-  doc.setTextColor(31, 41, 55);
+  doc.setFontSize(8.5);
+  doc.text(`${pdfSafeText(profile.riskLevel) || "Risk"} (${profile.riskScore}/100)`, margin + 9, y + 10.5);
+  doc.setTextColor(22, 101, 52);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text(profile.riskScore <= 35 ? "Favorable Agro-Climatic Window" : "Seasonal Risk Advisory", margin + 55, y + 8);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(7.2);
   const adviceLines = doc.splitTextToSize(
     pdfSafeText(profile.advice) || "Use insurance and formal credit for safer seasonal planning.",
-    pageWidth - margin * 2 - 72,
+    pageWidth - margin * 2 - 62,
   );
-  doc.text(adviceLines, margin + 70, y + 7);
-  y += Math.max(26, adviceLines.length * 5 + 10);
+  doc.text(adviceLines, margin + 55, y + 15);
+  y += 36;
 
   y = sectionHeading(doc, "ELIGIBLE LOAN SCHEMES", margin, y);
   if (profile.loans.length > 0) {
