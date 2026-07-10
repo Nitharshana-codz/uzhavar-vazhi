@@ -71,10 +71,34 @@ const RED: [number, number, number] = [220, 38, 38];
 const MUTED: [number, number, number] = [107, 114, 128];
 const PAGE_BOTTOM = 266;
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return window.btoa(binary);
+}
+
+async function addTamilFont(doc: jsPDF): Promise<boolean> {
+  try {
+    const response = await fetch("/fonts/NotoSansTamil-Regular.ttf");
+    if (!response.ok) return false;
+
+    doc.addFileToVFS("NotoSansTamil-Regular.ttf", arrayBufferToBase64(await response.arrayBuffer()));
+    doc.addFont("NotoSansTamil-Regular.ttf", "NotoSansTamil", "normal");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function pdfSafeText(value?: string | null): string {
   return (value ?? "")
-    .normalize("NFKD")
-    .replace(/[^\x20-\x7E]/g, "")
+    .normalize("NFC")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -168,6 +192,8 @@ export async function generateFarmerPDF(
 ): Promise<void> {
   const profile = profileFromArgs(farmerProfile, legacyResults);
   const doc = new jsPDF("portrait", "mm", "a4");
+  const hasTamilFont = await addTamilFont(doc);
+  const contentFont = hasTamilFont ? "NotoSansTamil" : "helvetica";
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
   let y = 0;
@@ -175,12 +201,11 @@ export async function generateFarmerPDF(
   doc.setFillColor(GREEN[0], GREEN[1], GREEN[2]);
   doc.rect(0, 0, pageWidth, 40, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(contentFont, "normal");
   doc.setFontSize(18);
-  doc.text("Uzhavar Vazhi", margin, 15);
-  doc.setFont("helvetica", "normal");
+  doc.text("Uzhavar Vazhi | உழவர் வழி", margin, 15);
   doc.setFontSize(10);
-  doc.text("Farmer Financial Readiness Profile - Seasonal Evaluation", margin, 25);
+  doc.text("Farmer Financial Readiness Profile — Seasonal Evaluation", margin, 25);
   doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, pageWidth - margin, 15, { align: "right" });
   y = 52;
 
@@ -191,14 +216,14 @@ export async function generateFarmerPDF(
     theme: "grid",
     body: [
       ["Farmer Profile", pdfSafeText(profile.farmerName) || "Farmer"],
-      ["District Location", pdfSafeText(profile.district)],
-      ["Main Crop Target", pdfSafeText(profile.crop)],
+      ["District Location", [pdfSafeText(profile.district), pdfSafeText(profile.districtTamilName)].filter(Boolean).join(" (") + (profile.districtTamilName ? ")" : "")],
+      ["Main Crop Target", [pdfSafeText(profile.crop), pdfSafeText(profile.cropTamilName)].filter(Boolean).join(" (") + (profile.cropTamilName ? ")" : "")],
       ["Cultivation Area", `${profile.landAcres} Acres`],
       ["Land Tenure Mode", profile.isTenant ? "Tenant Farmer" : "Land Owner (Direct Cultivation)"],
       ["Scheme Eligibility", profile.eligibility === "high" ? "Verified Eligible" : pdfSafeText(profile.eligibility) || "Verified Eligible"],
     ],
     columnStyles: { 0: { fontStyle: "bold", cellWidth: 58 }, 1: { cellWidth: 122 } },
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
+    styles: { font: contentFont, fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
     didParseCell: (data) => {
       if (data.section === "body" && data.row.index === 5 && data.column.index === 1) {
         data.cell.styles.textColor = GREEN;
@@ -240,7 +265,7 @@ export async function generateFarmerPDF(
       ]),
       headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: LIGHT_GREEN },
-      styles: { font: "helvetica", fontSize: 8.5, cellPadding: 3 },
+      styles: { font: contentFont, fontSize: 8.5, cellPadding: 3 },
     });
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   } else {
@@ -278,7 +303,7 @@ export async function generateFarmerPDF(
       ]),
       headStyles: { fillColor: GREEN, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: LIGHT_GREEN },
-      styles: { font: "helvetica", fontSize: 8.5, cellPadding: 3 },
+      styles: { font: contentFont, fontSize: 8.5, cellPadding: 3 },
     });
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   } else {
@@ -340,10 +365,5 @@ export async function generateFarmerPDF(
 
   drawFooter(doc);
 
-  const fileName = `uzhavar-vazhi-${profile.farmerName || profile.district}-${profile.crop}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  doc.save(`${fileName || "farmer-profile"}.pdf`);
+  doc.save("uzhavar_vazhi_farmer_profile.pdf");
 }

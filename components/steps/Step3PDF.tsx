@@ -9,7 +9,7 @@ import districts from '@/lib/data/districts.json';
 import crops from '@/src/data/crops.json';
 import schemes from '@/src/data/schemes.json';
 import riskMatrix from '@/src/data/riskMatrix.json';
-import { jsPDF } from 'jspdf';
+import { generateFarmerPDF } from '@/lib/generate-pdf';
 
 interface Step3PDFProps {
   farmerData: FarmerData;
@@ -24,7 +24,7 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
 
   const district = districts.find((d) => d.id === farmerData.district);
   const crop = crops.find((c) => c.id === farmerData.crop);
-  const cropRisk = (riskMatrix.crops as any)[farmerData.crop] || { risk: 'low', riskScore: 30 };
+  const cropRisk = riskMatrix.find((entry) => entry.cropId === farmerData.crop) || { riskLevel: 30 };
 
   const eligibleSchemes = schemes.filter((s) => {
     const cropEligible = s.eligibleCrops?.includes(farmerData.crop) || s.eligibleCrops?.includes('All');
@@ -37,69 +37,52 @@ export function Step3PDF({ farmerData, onBack, onReset }: Step3PDFProps) {
     return cropEligible && ownershipEligible && landSizeOk && districtEligible;
   });
 
-  const riskLabel = cropRisk.riskScore <= 33 ? 'Low' : cropRisk.riskScore <= 66 ? 'Medium' : 'High';
+  const riskScore = cropRisk.riskLevel;
+  const riskLabel = riskScore <= 33 ? 'Low' : riskScore <= 66 ? 'Medium' : 'High';
 
-  const handleDownloadPDF = () => {
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
+  const handleDownloadPDF = async () => {
+    const loans = eligibleSchemes
+      .filter((scheme) => scheme.type === 'loan')
+      .map((scheme) => ({
+        id: scheme.id,
+        name: scheme.en,
+        tamilName: scheme.ta,
+        provider: scheme.id === 'kcc' ? 'Nationalised & Cooperative Banks' : 'Tamil Nadu Cooperative Banks',
+        maxAmount: 'maxAmount' in scheme ? scheme.maxAmount ?? null : null,
+        interestRate: scheme.id === 'kcc' ? '4% (with government subvention)' : 'As per scheme terms',
+        documents: ['Aadhaar Card', 'Land Ownership Record', 'Bank Passbook', 'Passport Photographs'],
+      }));
+    const insurance = eligibleSchemes
+      .filter((scheme) => scheme.type === 'insurance')
+      .map((scheme) => ({
+        id: scheme.id,
+        name: scheme.en,
+        tamilName: scheme.ta,
+        coverage: 'Crop loss due to drought, flood, pest, and disease',
+        premiumRate: scheme.id === 'pmfby' ? '2% for Kharif crops' : 'As per scheme terms',
+      }));
+
+    await generateFarmerPDF({
+      farmerName: farmerData.farmerName,
+      district: district?.en ?? farmerData.district,
+      districtTamilName: district?.ta ?? '',
+      crop: crop?.en ?? farmerData.crop,
+      cropTamilName: crop?.ta,
+      landAcres: farmerData.landSize,
+      isTenant: farmerData.ownership !== 'owned',
+      eligibility: loans.length > 0 || insurance.length > 0 ? 'Verified Eligible' : 'No matching schemes',
+      season: crop?.season,
+      loans,
+      insurance,
+      riskScore,
+      riskLevel: `${riskLabel} Risk`,
+      advice:
+        riskLabel === 'Low'
+          ? 'Favorable agro-climatic conditions support planned crop investments this season.'
+          : 'Use insurance and formal credit to reduce seasonal cultivation risk.',
+      cropMsp: crop?.msp ?? undefined,
+      estimatedRevenue: crop?.msp ? crop.msp * farmerData.landSize * 10 : undefined,
     });
-
-    // Add report title and content to PDF
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(20);
-    pdf.setTextColor(59, 109, 17); // Paddy Color (#3B6D11)
-    pdf.text('Uzhavar Vazhi - Eligibility Report', 20, 20);
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(44, 44, 42); // Soil Color (#2C2C2A)
-    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 20, 26);
-    pdf.line(20, 28, 190, 28);
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.text('Farmer Information', 20, 36);
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.text(`Name: ${farmerData.farmerName}`, 20, 44);
-    pdf.text(`District: ${district?.en} (${district?.ta})`, 20, 50);
-    pdf.text(`Crop: ${crop?.en} (${crop?.ta})`, 20, 56);
-    pdf.text(`Land Size: ${farmerData.landSize} acres`, 20, 62);
-    pdf.text(`Ownership: ${farmerData.ownership}`, 20, 68);
-
-    pdf.line(20, 74, 190, 74);
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Eligible Schemes', 20, 82);
-
-    pdf.setFont('helvetica', 'normal');
-    let yOffset = 90;
-    if (eligibleSchemes.length > 0) {
-      eligibleSchemes.forEach((s) => {
-        pdf.text(`- ${s.en} (${s.ta})`, 22, yOffset);
-        yOffset += 6;
-      });
-    } else {
-      pdf.text('No matching schemes found.', 22, yOffset);
-      yOffset += 6;
-    }
-
-    pdf.line(20, yOffset + 4, 190, yOffset + 4);
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Seasonal Risk Reference', 20, yOffset + 12);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Risk Category: ${riskLabel}`, 20, yOffset + 18);
-    pdf.text(`Monsoon Impact Reference: Low Northeast monsoon expected`, 20, yOffset + 24);
-
-    pdf.setFontSize(8);
-    pdf.setTextColor(59, 109, 17);
-    pdf.text('Uzhavar Vazhi - Supporting Tamil Nadu Farmers - uzhavarvazhi.in', 20, 280);
-
-    pdf.save(`farmer-profile-${farmerData.farmerName.replace(/\s+/g, '-')}.pdf`);
   };
 
   const handleWhatsAppShare = () => {
