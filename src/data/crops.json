@@ -6,5 +6,17 @@
   { "id": "groundnut", "en": "Groundnut", "ta": "நிலக்கடலை", "msp": 5950, "season": "Kharif" },
   { "id": "maize", "en": "Maize", "ta": "மக்காச்சோளம்", "msp": 2250, "season": "Kharif" },
   { "id": "coconut", "en": "Coconut", "ta": "தென்னை", "msp": null, "season": "Perennial" },
-  { "id": "turmeric", "en": "Turmeric", "ta": "மஞ்சள்", "msp": null, "season": "Annual" }
+  { "id": "turmeric", "en": "Turmeric", "ta": "மஞ்சள்", "msp": null, "season": "Annual" },
+
+  { "id": "sorghum", "en": "Sorghum", "ta": "சோளம்", "msp": 3371, "season": "Kharif" },
+  { "id": "cumbu", "en": "Cumbu", "ta": "கம்பு", "msp": 2775, "season": "Kharif" },
+  { "id": "ragi", "en": "Ragi", "ta": "கேழ்வரகு", "msp": 4886, "season": "Kharif" },
+  { "id": "redgram", "en": "Redgram", "ta": "துவரம்", "msp": 8000, "season": "Kharif" },
+  { "id": "greengram", "en": "Greengram", "ta": "பாசிப்பயறு", "msp": 8768, "season": "Kharif" },
+  { "id": "blackgram", "en": "Blackgram", "ta": "உளுந்து", "msp": 8682, "season": "Kharif" },
+  { "id": "bengalgram", "en": "Bengalgram", "ta": "கடலை", "msp": 5650, "season": "Rabi" },
+  { "id": "sunflower", "en": "Sunflower", "ta": "சூரியகாந்தி", "msp": 7280, "season": "Rabi" },
+  { "id": "soyabean", "en": "Soyabean", "ta": "சோயாபீன்", "msp": 5328, "season": "Kharif" },
+  { "id": "sesamum", "en": "Sesamum", "ta": "எள்", "msp": 9837, "season": "Kharif" },
+  { "id": "copra", "en": "Copra", "ta": "கொப்பரை", "msp": 12300, "season": "Annual" }
 ]
