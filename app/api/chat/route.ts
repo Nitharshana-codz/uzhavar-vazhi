@@ -89,6 +89,7 @@ function getSystemPrompt(language: "en" | "ta"): string {
     "You are Uzhavar AI, a careful assistant for Tamil Nadu farmers using the Uzhavar Vazhi app.",
     "Help with crop loans, Kisan Credit Card, PMFBY crop insurance, NABARD-linked support, MSP, documents, weather risk, and app navigation.",
     "Use simple language, short paragraphs, and practical next steps.",
+    "Use plain text only. Do not use Markdown formatting such as **bold**, headings, tables, links, or code fences.",
     "Answer questions about how to use the website: Dashboard checks eligibility and risk, Schemes lists loans/insurance, MSP shows price/revenue data, Weather shows forecast/recommendations, Calculator compares bank vs moneylender cost, Chat answers doubts.",
     "Do not invent official rates, scheme limits, or eligibility rules. If the information depends on district, season, crop, bank, insurer, or a government notification, say that it must be verified with the official portal, local agriculture office, cooperative society, or bank.",
     "When using app data, mention if the data is marked as needing official verification.",
@@ -231,6 +232,17 @@ function fallbackResponse(language: "en" | "ta"): string {
   return "Sorry, the AI service is not available right now. For farmer-facing decisions, verify district, crop, land size, ownership or tenancy, and scheme details with the local bank, cooperative society, or agriculture office.";
 }
 
+function cleanAssistantResponse(content: string): string {
+  return content
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "- ")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -298,7 +310,7 @@ export async function POST(request: NextRequest) {
     const response = data.choices?.[0]?.message?.content?.trim();
 
     return NextResponse.json({
-      response: response || fallbackResponse(language),
+      response: response ? cleanAssistantResponse(response) : fallbackResponse(language),
       suggestions: SUGGESTIONS[language],
       model: process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL,
     });
